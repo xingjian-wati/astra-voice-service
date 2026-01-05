@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveKit 客户端测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status-connecting {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .status-disconnected {
+            background: #e2e3e5;
+            color: #383d41;
+            border-left: 4px solid #6c757d;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #666;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box pre {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        .audio-container {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .audio-container.show {
+            display: block;
+        }
+
+        .audio-visualizer {
+            width: 100%;
+            height: 100px;
+            background: white;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+
+        .logs {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+
+        .log-info { border-left-color: #4facfe; }
+        .log-success { border-left-color: #28a745; }
+        .log-warning { border-left-color: #ffc107; }
+        .log-error { border-left-color: #dc3545; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ LiveKit 客户端测试</h1>
+        <p class="subtitle">测试 LiveKit 语音通话集成</p>
+
+        <!-- 状态显示 -->
+        <div id="status" class="status"></div>
+
+        <!-- 配置区 -->
+        <div class="section">
+            <div class="section-title">
+                <span>⚙️</span>
+                <span>配置</span>
+            </div>
+            <div class="form-group">
+                <label>API 地址</label>
+                <input type="text" id="apiUrl" value="http://localhost:8082" placeholder="http://localhost:8082">
+            </div>
+            <div class="form-group">
+                <label>API Key (JWT Token) - 可选，如果有 SECRET_KEY 保护则必填</label>
+                <input type="text" id="apiKey" value="" placeholder="eyJhbGc...">
+                <small style="color: #666; font-size: 12px;">使用 whatsappcall/cmd/generate_jwt 生成，或留空（开发模式）</small>
+            </div>
+            <div class="form-group">
+                <label>参与者名称</label>
+                <input type="text" id="participantName" value="test-user" placeholder="输入你的名称">
+            </div>
+            <div class="form-group">
+                <label>Agent ID</label>
+                <input type="text" id="agentId" value="agent-1" placeholder="选择 Agent">
+            </div>
+            <div class="form-group">
+                <label>语言</label>
+                <select id="language">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="section">
+            <div class="section-title">
+                <span>🎮</span>
+                <span>控制</span>
+            </div>
+            <div class="button-group">
+                <button id="connectBtn" class="btn-primary" onclick="connectToRoom()">
+                    <span>▶️</span>
+                    <span>连接房间</span>
+                </button>
+                <button id="disconnectBtn" class="btn-danger" onclick="disconnectFromRoom()" disabled>
+                    <span>⏹️</span>
+                    <span>断开连接</span>
+                </button>
+                <button id="testMicBtn" class="btn-success" onclick="testMicrophone()">
+                    <span>🎤</span>
+                    <span>测试麦克风</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 连接信息 -->
+        <div id="connectionInfo" class="info-box" style="display: none;">
+            <strong>📋 连接信息：</strong>
+            <pre id="connectionDetails"></pre>
+        </div>
+
+        <!-- 音频容器 -->
+        <div id="audioContainer" class="audio-container">
+            <div>🎧 音频播放区域</div>
+            <div id="audioVisualizer" class="audio-visualizer">等待 AI 回复...</div>
+            <div id="remoteAudio"></div>
+        </div>
+
+        <!-- 日志 -->
+        <div class="section">
+            <div class="section-title">
+                <span>📝</span>
+                <span>日志</span>
+                <button onclick="clearLogs()" style="margin-left: auto; padding: 4px 12px; font-size: 12px;" class="btn-danger">
+                    清空
+                </button>
+            </div>
+            <div id="logs" class="logs"></div>
+        </div>
+    </div>
+
+    <!-- LiveKit Client SDK -->
+    <script 
+        src="https://unpkg.com/livekit-client@latest/dist/livekit-client.umd.min.js"
+        onerror="console.error('Failed to load LiveKit SDK from unpkg, trying backup CDN...'); document.write('<script src=\'https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js\'><\/script>');">
+    </script>
+
+    <script>
+        let room = null;
+        let localAudioTrack = null;
+        let connectionId = null;
+
+        // 日志函数
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logs.appendChild(entry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            log('日志已清空', 'info');
+        }
+
+        // 更新状态
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `status status-${type} show`;
+            status.textContent = message;
+        }
+
+        // 测试麦克风
+        async function testMicrophone() {
+            try {
+                log('正在测试麦克风权限...', 'info');
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                log('✅ 麦克风权限已授予', 'success');
+                
+                // 显示音频电平
+                const audioContext = new AudioContext();
+                const analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+                analyser.fftSize = 256;
+                
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                let testCount = 0;
+                const interval = setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                    log(`麦克风电平: ${Math.round(average)}/255`, 'info');
+                    
+                    testCount++;
+                    if (testCount >= 3) {
+                        clearInterval(interval);
+                        stream.getTracks().forEach(track => track.stop());
+                        log('✅ 麦克风测试完成', 'success');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ 麦克风测试失败: ${error.message}`, 'error');
+                alert('无法访问麦克风，请检查浏览器权限设置');
+            }
+        }
+
+        // 连接到房间
+        async function connectToRoom() {
+            try {
+                // 检查 LiveKit SDK 是否已加载
+                if (typeof LivekitClient === 'undefined') {
+                    alert('❌ LiveKit SDK 未加载！\n\n请检查：\n1. 网络连接是否正常\n2. 是否被防火墙阻止\n3. 刷新页面重试');
+                    log('❌ LiveKit SDK 未加载，无法连接', 'error');
+                    return;
+                }
+                
+                const apiUrl = document.getElementById('apiUrl').value;
+                const participantName = document.getElementById('participantName').value;
+                const agentId = document.getElementById('agentId').value;
+                const language = document.getElementById('language').value;
+
+                if (!participantName) {
+                    alert('请输入参与者名称');
+                    return;
+                }
+
+                updateStatus('正在创建房间...', 'connecting');
+                log('🚀 开始连接流程...', 'info');
+                log(`API: ${apiUrl}`, 'info');
+                log(`参与者: ${participantName}`, 'info');
+                log(`Agent: ${agentId}`, 'info');
+                log(`语言: ${language}`, 'info');
+
+                // 获取 API Key
+                const apiKey = document.getElementById('apiKey').value;
+                
+                // 1. 创建房间并获取 token
+                log('📞 正在调用 /livekit/create-room API...', 'info');
+                
+                // 构建请求头
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // 如果有 API Key，添加到请求头
+                if (apiKey) {
+                    headers['X-API-Key'] = apiKey;
+                    log('🔑 使用 API Key 认证', 'info');
+                }
+                
+                const response = await fetch(`${apiUrl}/livekit/create-room`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        participantName: participantName,
+                        agentId: agentId,
+                        voiceLanguage: language
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API 错误 (${response.status}): ${errorText}`);
+                }
+
+                const data = await response.json();
+                log(`✅ 房间创建成功: ${data.roomName}`, 'success');
+                log(`🔑 Access Token: ${data.accessToken.substring(0, 50)}...`, 'info');
+                
+                connectionId = data.connectionId;
+
+                // 显示连接信息
+                document.getElementById('connectionDetails').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('connectionInfo').style.display = 'block';
+
+                // 2. 使用 LiveKit SDK 连接
+                log('🔗 正在连接到 LiveKit Server...', 'info');
+                room = new LivekitClient.Room();
+
+                // 设置事件监听
+                room.on(LivekitClient.RoomEvent.Connected, () => {
+                    log('✅ 已连接到房间', 'success');
+                    updateStatus('已连接，准备发布音频', 'connected');
+                });
+
+                room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                    log(`🎧 收到音频轨道: ${track.kind} from ${participant.identity}`, 'success');
+                    if (track.kind === 'audio') {
+                        const audioElement = track.attach();
+                        audioElement.volume = 1.0;
+                        document.getElementById('remoteAudio').appendChild(audioElement);
+                        document.getElementById('audioContainer').classList.add('show');
+                        document.getElementById('audioVisualizer').textContent = '🔊 正在播放 AI 音频...';
+                        log('✅ AI 音频已开始播放', 'success');
+                    }
+                });
+
+                room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+                    log(`🔇 音频轨道已停止: ${track.kind}`, 'info');
+                    track.detach();
+                });
+
+                room.on(LivekitClient.RoomEvent.Disconnected, () => {
+                    log('🔌 已断开连接', 'warning');
+                    updateStatus('已断开连接', 'disconnected');
+                    resetUI();
+                });
+
+                room.on(LivekitClient.RoomEvent.ParticipantConnected, (participant) => {
+                    log(`👤 参与者加入: ${participant.identity}`, 'info');
+                });
+
+                // 连接到房间
+                await room.connect(data.serverUrl, data.accessToken);
+                log('✅ LiveKit 连接建立成功', 'success');
+
+                // 3. 发布麦克风音频（使用 LiveKit SDK 推荐配置）
+                log('🎤 正在发布麦克风音频...', 'info');
+                
+                // 使用 LiveKit SDK 的最佳实践
+                localAudioTrack = await LivekitClient.createLocalAudioTrack({
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 48000,
+                    channelCount: 1,
+                });
+                
+                // ✅ 生产模式：禁用 DTX 以获得最佳 VAD 性能和最低延迟
+                await room.localParticipant.publishTrack(localAudioTrack, {
+                    dtx: false,  // 🔥 禁用 DTX，确保音频包持续发送，OpenAI VAD 快速响应
+                    audioBitrate: 32000,  // 32kbps，与服务端一致
+                });
+                log('✅ 麦克风音频发布成功', 'success');
+
+                updateStatus('✅ 连接成功！开始对话吧', 'connected');
+                
+                // 更新按钮状态
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+
+                log('🎉 一切就绪，可以开始对话了！', 'success');
+
+            } catch (error) {
+                log(`❌ 连接失败: ${error.message}`, 'error');
+                updateStatus(`连接失败: ${error.message}`, 'error');
+                console.error('详细错误:', error);
+                resetUI();
+            }
+        }
+
+        // 断开连接
+        async function disconnectFromRoom() {
+            try {
+                log('🔌 正在断开连接...', 'info');
+
+                // 1. 断开 LiveKit 连接
+                if (room) {
+                    room.disconnect();
+                    room = null;
+                }
+
+                if (localAudioTrack) {
+                    localAudioTrack.stop();
+                    localAudioTrack = null;
+                }
+
+                // 2. 调用后端 API 清理
+                if (connectionId) {
+                    const apiUrl = document.getElementById('apiUrl').value;
+                    const apiKey = document.getElementById('apiKey').value;
+                    log(`🧹 正在清理服务端资源: ${connectionId}`, 'info');
+                    
+                    // 构建请求头
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    
+                    // 如果有 API Key，添加到请求头
+                    if (apiKey) {
+                        headers['X-API-Key'] = apiKey;
+                    }
+                    
+                    const response = await fetch(`${apiUrl}/livekit/end-call`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({
+                            connectionId: connectionId
+                        })
+                    });
+
+                    if (response.ok) {
+                        log('✅ 服务端资源已清理', 'success');
+                    } else {
+                        log('⚠️ 服务端清理失败，但本地已断开', 'warning');
+                    }
+                }
+
+                updateStatus('已断开连接', 'disconnected');
+                log('✅ 断开连接完成', 'success');
+                resetUI();
+
+            } catch (error) {
+                log(`❌ 断开连接时出错: ${error.message}`, 'error');
+                console.error('详细错误:', error);
+                resetUI();
+            }
+        }
+
+        // 重置 UI
+        function resetUI() {
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('connectionInfo').style.display = 'none';
+            document.getElementById('audioContainer').classList.remove('show');
+            document.getElementById('remoteAudio').innerHTML = '';
+            connectionId = null;
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            log('🎬 LiveKit 测试页面已加载', 'success');
+            log('📌 请确保 LiveKit Server 和后端服务已启动', 'info');
+            log('💡 点击"测试麦克风"检查音频权限', 'info');
+            
+            // 检查 LiveKit SDK 是否加载
+            if (typeof LivekitClient !== 'undefined') {
+                log(`✅ LiveKit SDK 加载成功 (版本: ${LivekitClient.version || 'unknown'})`, 'success');
+            } else {
+                log('❌ LiveKit SDK 加载失败，请检查网络连接', 'error');
+            }
+        });
+
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', () => {
+            if (room) {
+                room.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>
+

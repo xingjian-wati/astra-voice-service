@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Management Dashboard - WhatsApp Call</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 
+                0 32px 64px rgba(31, 38, 135, 0.37),
+                0 8px 32px rgba(31, 38, 135, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            padding: 48px;
+            max-width: 900px;
+            width: 100%;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 32px;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        .card-description {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 24px;
+        }
+
+        .card-features li {
+            color: #4b5563;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-features li::before {
+            content: '✓';
+            color: #10b981;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .card-action {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-align: center;
+            display: block;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .card-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .quick-links {
+            background: #f9fafb;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .quick-links h3 {
+            color: #374151;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .quick-link {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #374151;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            
+            .dashboard-card {
+                padding: 24px;
+            }
+            
+            .links-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎛️ Management Dashboard</h1>
+            <p>Manage your WhatsApp Call system components</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <a href="/tenants" class="dashboard-card">
+                <div class="card-icon">🏢</div>
+                <h2 class="card-title">Tenant Management</h2>
+                <p class="card-description">
+                    Manage voice tenants, their configurations, and Astra integrations.
+                </p>
+                <ul class="card-features">
+                    <li>Create and edit tenants</li>
+                    <li>Configure Astra API keys</li>
+                    <li>Enable/disable tenants</li>
+                    <li>View tenant statistics</li>
+                    <li>Export tenant data</li>
+                </ul>
+                <div class="card-action">
+                    Manage Tenants →
+                </div>
+            </a>
+
+            <a href="/agents" class="dashboard-card">
+                <div class="card-icon">🤖</div>
+                <h2 class="card-title">Agent Management</h2>
+                <p class="card-description">
+                    Configure voice agents, their prompts, and behavioral settings.
+                </p>
+                <ul class="card-features">
+                    <li>Create and edit agents</li>
+                    <li>Configure system prompts</li>
+                    <li>Set voice and speed</li>
+                    <li>Assign to tenants</li>
+                    <li>Preview configurations</li>
+                </ul>
+                <div class="card-action">
+                    Manage Agents →
+                </div>
+            </a>
+
+        </div>
+
+        <div class="quick-links">
+            <h3>🔗 Quick Links</h3>
+            <div class="links-grid">
+                <a href="/test-page" class="quick-link">
+                    🎤 Test Page
+                </a>
+                <a href="/test-outbound" class="quick-link">
+                    📞 Outbound Call Test
+                </a>
+                <a href="/test-webrtc" class="quick-link">
+                    📲 WebRTC Test Client
+                </a>
+                <a href="/static/html/tenant_management.html" class="quick-link">
+                    🏢 Direct Tenant Access
+                </a>
+                <a href="/static/html/agent_management.html" class="quick-link">
+                    🤖 Direct Agent Access
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

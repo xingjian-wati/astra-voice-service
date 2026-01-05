@@ -1,0 +1,38 @@
+services:
+  whatsapp-voice-livekit-server:
+    image: livekit/livekit-server:latest
+    container_name: whatsapp-voice-livekit-server
+    command: --dev
+    ports:
+      - "7880:7880"
+      - "7881:7881/udp"
+      - "7882:7882/udp"
+    environment:
+      # IMPORTANT: Use sufficiently long secret for HMAC-SHA256
+      LIVEKIT_KEYS: "devkey: secret1234567890abcdefghijklmnopqrstuvwxyz"
+      # Low latency optimization
+      LIVEKIT_RTC_BUFFER_SIZE: "50"
+      LIVEKIT_RTC_PLI_THROTTLE: "100ms"
+      LIVEKIT_RTC_PACKET_BUFFER_SIZE: "50"
+    restart: unless-stopped
+    networks:
+      - livekit-network
+
+networks:
+  livekit-network:
+    driver: bridge
+
+# Usage:
+# 1. Set environment variables or use defaults:
+#    export LIVEKIT_API_KEY=your-key
+#    export LIVEKIT_API_SECRET=your-secret
+#
+# 2. Start LiveKit server:
+#    docker-compose -f docker-compose.livekit.yml up -d
+#
+# 3. Check logs:
+#    docker-compose -f docker-compose.livekit.yml logs -f
+#
+# 4. Stop LiveKit server:
+#    docker-compose -f docker-compose.livekit.yml down
+

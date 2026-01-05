@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Management - WhatsApp Call</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/agent_management.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agent Management</h1>
+            <p>Manage voice agents and their configurations</p>
+            <div class="header-actions">
+                <button class="btn btn-success" id="quickCreateAgentBtn">
+                    <span class="btn-icon">⚡</span>
+                    Quick Create
+                </button>
+                <button class="btn btn-primary" id="addAgentBtn">
+                    <span class="btn-icon">➕</span>
+                    Add New Agent
+                </button>
+                <button class="btn btn-secondary" id="refreshBtn">
+                    <span class="btn-icon">🔄</span>
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="filters-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by name, ID, tenant, business number...">
+                <span class="search-icon">🔍</span>
+            </div>
+            <div class="filter-controls">
+                <select id="tenantFilter">
+                    <option value="">All Tenants</option>
+                    <!-- Dynamic tenant options will be loaded here -->
+                </select>
+                <select id="typeFilter">
+                    <option value="">All Types</option>
+                    <option value="wati">WATI</option>
+                    <option value="automotive">Automotive</option>
+                    <option value="financial">Financial</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="travel">Travel</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="includeDisabledFilter">
+                    <span class="checkmark"></span>
+                    Include Disabled
+                </label>
+                <select id="sortSelect">
+                    <option value="name">Sort by Name</option>
+                    <option value="type">Sort by Type</option>
+                    <option value="created_at">Sort by Created Date</option>
+                    <option value="updated_at">Sort by Updated Date</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🤖</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="totalAgents">0</div>
+                    <div class="stat-label">Total Agents</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="activeAgents">0</div>
+                    <div class="stat-label">Active Agents</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">❌</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="disabledAgents">0</div>
+                    <div class="stat-label">Disabled Agents</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏢</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="uniqueTenants">0</div>
+                    <div class="stat-label">Unique Tenants</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agents Table -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>📋 Agents List</h3>
+                <div class="table-actions">
+                    <button class="btn btn-outline" id="exportBtn">
+                        <span class="btn-icon">📥</span>
+                        Export
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="agentsTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Agent ID</th>
+                            <th>Type</th>
+                            <th>Tenant</th>
+                            <th>Tenant ID</th>
+                            <th>Business Number</th>
+                            <th>Voice</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agentsTableBody">
+                        <!-- Dynamic content will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="loading-state" id="loadingState">
+                <div class="spinner"></div>
+                <p>Loading agents...</p>
+            </div>
+            
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">🤖</div>
+                <h3>No Agents Found</h3>
+                <p>Get started by creating your first agent</p>
+                <button class="btn btn-primary" onclick="openAgentModal()">
+                    <span class="btn-icon">➕</span>
+                    Create First Agent
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Modal -->
+    <div class="modal-overlay" id="agentModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Agent</h2>
+                <button class="modal-close" onclick="closeAgentModal()">✕</button>
+            </div>
+            
+            <form id="agentForm" class="modal-body">
+                <input type="hidden" id="agentId" name="id">
+                
+                <!-- Tab Navigation -->
+                <div class="tab-navigation">
+                    <button type="button" class="tab-btn active" onclick="switchTab('basic')">📋 Basic Info</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('config')">⚙️ Agent Config</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('json')">🔧 Advanced (JSON)</button>
+                </div>
+                
+                <!-- Tab: Basic Info -->
+                <div id="tabBasic" class="tab-content active">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="agentName">Agent Name *</label>
+                            <input type="text" id="agentName" name="agent_name" required 
+                               placeholder="Enter agent name">
+                    </div>
+                    
+                    <div class="form-group">
+                            <label for="tenantSelect">Tenant *</label>
+                            <select id="tenantSelect" name="voice_tenant_id" required>
+                                <option value="">Select tenant</option>
+                                <!-- Dynamic tenant options will be loaded here -->
+                        </select>
+                    </div>
+                </div>
+                
+                    <div class="form-group">
+                        <label for="instruction">Instruction</label>
+                        <textarea id="instruction" name="instruction" rows="4" 
+                                  placeholder="Brief description or instruction for this agent"></textarea>
+                        <small class="form-help">High-level description (stored separately from detailed config)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="disabled" name="disabled">
+                            <span class="checkmark"></span>
+                            Disable Agent
+                        </label>
+                        <small class="form-help">Disabled agents cannot be used for voice calls</small>
+                    </div>
+                    
+                    <hr style="margin: 24px 0; border: none; border-top: 2px solid #e0e0e0;">
+                    
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
+                        <h3 style="margin: 0 0 12px 0; color: white;">🤖 AI Smart Generator</h3>
+                        <p style="margin: 0 0 16px 0; opacity: 0.95; font-size: 14px;">
+                            Let AI automatically generate complete Agent configuration based on your description or brand information
+                        </p>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button type="button" class="btn" onclick="openAIGeneratorModal()" 
+                                    style="background: white; color: #667eea; font-weight: 600; flex: 1; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <span class="btn-icon">✨</span> Generate from Description
+                            </button>
+                            <button type="button" class="btn" onclick="openBrandkitGeneratorModal()" 
+                                    style="background: rgba(255,255,255,0.2); color: white; font-weight: 600; flex: 1; min-width: 200px; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <span class="btn-icon">🎨</span> Generate from Brandkit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab: Agent Config -->
+                <div id="tabConfig" class="tab-content" style="display: none;">
+                    <!-- AI Generator Section -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; margin-bottom: 24px;">
+                        <h3 style="margin: 0 0 12px 0; color: white;">🤖 AI Smart Configuration Generator</h3>
+                        <p style="margin: 0 0 16px 0; opacity: 0.95; font-size: 14px;">
+                            Use AI to quickly generate complete Agent configuration, including Persona, Voice, Prompts and all fields
+                        </p>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button type="button" class="btn" onclick="openAIGeneratorModal()" 
+                                    style="background: white; color: #667eea; font-weight: 600; flex: 1; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <span class="btn-icon">✨</span> Generate from Description
+                            </button>
+                            <button type="button" class="btn" onclick="openBrandkitGeneratorModal()" 
+                                    style="background: rgba(255,255,255,0.2); color: white; font-weight: 600; flex: 1; min-width: 200px; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <span class="btn-icon">🎨</span> Generate from Brandkit
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <h3>🎭 Personality & Behavior</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                            <label for="businessNumber">Business Number</label>
+                            <input type="text" id="businessNumber" name="business_number" 
+                                   placeholder="16206469712">
+                        </div>
+                        <div class="form-group">
+                            <label for="persona">Persona</label>
+                            <input type="text" id="persona" name="persona" 
+                                   placeholder="friendly, professional sales agent">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="toneSelect">Tone</label>
+                            <select id="toneSelect" name="toneSelect" onchange="handleToneChange(this)">
+                                <option value="">-- Select tone --</option>
+                                <option value="friendly">Friendly</option>
+                                <option value="professional">Professional</option>
+                                <option value="casual">Casual</option>
+                                <option value="enthusiastic">Enthusiastic</option>
+                                <option value="empathetic">Empathetic</option>
+                                <option value="warm">Warm</option>
+                                <option value="formal">Formal</option>
+                                <option value="conversational">Conversational</option>
+                                <option value="__custom__">✏️ Custom...</option>
+                            </select>
+                            <input 
+                                type="text" 
+                                id="tone" 
+                                name="tone" 
+                                placeholder="Enter custom tone..."
+                                style="display: none; margin-top: 8px;"
+                            >
+                            <small class="form-help" id="toneHelp" style="display: none;">
+                                💡 Enter your custom tone (e.g., "warm and patient", "professional but friendly")
+                            </small>
+                        </div>
+                    <div class="form-group">
+                        <label for="language">Language</label>
+                        <select id="language" name="language">
+                            <option value="en">English</option>
+                                <option value="zh">Chinese (Mandarin - 普通话)</option>
+                                <option value="zh-HK">Chinese (Cantonese - 粤语)</option>
+                                <option value="zh-TW">Chinese (Taiwanese - 台湾话)</option>
+                                <option value="es">Spanish (Español)</option>
+                                <option value="fr">French (Français)</option>
+                                <option value="de">German (Deutsch)</option>
+                                <option value="ja">Japanese (日本語)</option>
+                                <option value="ko">Korean (한국어)</option>
+                                <option value="pt">Portuguese (Português)</option>
+                                <option value="pt-BR">Portuguese (Brazilian - Português Brasileiro)</option>
+                                <option value="it">Italian (Italiano)</option>
+                                <option value="ru">Russian (Русский)</option>
+                                <option value="ar">Arabic (العربية)</option>
+                                <option value="hi">Hindi (हिन्दी)</option>
+                                <option value="th">Thai (ไทย)</option>
+                                <option value="vi">Vietnamese (Tiếng Việt)</option>
+                                <option value="id">Indonesian (Bahasa Indonesia)</option>
+                                <option value="ms">Malay (Bahasa Melayu)</option>
+                                <option value="nl">Dutch (Nederlands)</option>
+                                <option value="pl">Polish (Polski)</option>
+                                <option value="tr">Turkish (Türkçe)</option>
+                                <option value="sv">Swedish (Svenska)</option>
+                                <option value="no">Norwegian (Norsk)</option>
+                                <option value="da">Danish (Dansk)</option>
+                                <option value="fi">Finnish (Suomi)</option>
+                                <option value="el">Greek (Ελληνικά)</option>
+                                <option value="he">Hebrew (עברית)</option>
+                                <option value="uk">Ukrainian (Українська)</option>
+                                <option value="cs">Czech (Čeština)</option>
+                                <option value="ro">Romanian (Română)</option>
+                                <option value="hu">Hungarian (Magyar)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="defaultAccent">Default Accent <span style="color: #999; font-size: 0.9em;">(Optional)</span></label>
+                        <select id="defaultAccent" name="default_accent">
+                            <option value="">-- No Default Accent --</option>
+                            <!-- Options will be populated dynamically based on language -->
+                        </select>
+                        <small class="form-help">💡 Default accent for the primary language. If set, the agent will start with this accent when speaking the primary language.</small>
+                    </div>
+                </div>
+                
+                    <div class="form-row">
+                <div class="form-group">
+                            <label for="voice">Voice <span style="color: #999; font-size: 0.9em;">(OpenAI TTS Voice)</span></label>
+                            <select id="voice" name="voice">
+                                <option value="">-- Default --</option>
+                                <option value="alloy">Alloy - Neutral and balanced</option>
+                                <option value="ash">Ash - Clear and precise</option>
+                                <option value="ballad">Ballad - Melodious and smooth</option>
+                                <option value="coral">Coral - Warm and friendly</option>
+                                <option value="echo">Echo - Resonant and deep</option>
+                                <option value="sage">Sage - Calm and thoughtful</option>
+                                <option value="shimmer">Shimmer - Bright and energetic</option>
+                                <option value="verse">Verse - Versatile and expressive</option>
+                                <option value="marin">Marin - Feminine and soft</option>
+                                <option value="cedar">Cedar - Warm and natural</option>
+                            </select>
+                            <small class="form-help">Choose the AI voice type</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="speed">
+                                Speed <span style="color: #999; font-size: 0.9em;">(0.25 - 4.0)</span>
+                                <span id="speedValue" style="color: #4CAF50; font-weight: bold; margin-left: 8px;">1.0x</span>
+                            </label>
+                            <input 
+                                type="range" 
+                                id="speed" 
+                                name="speed" 
+                                min="0.25" 
+                                max="4.0" 
+                                step="0.05" 
+                                value="1.0"
+                                oninput="updateSpeedDisplay(this.value)"
+                                style="width: 100%;"
+                            >
+                            <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #999; margin-top: 4px;">
+                                <span>0.25x (Slow)</span>
+                                <span>1.0x (Normal)</span>
+                                <span>4.0x (Fast)</span>
+                            </div>
+                            <small class="form-help">Adjust speech speed with slider</small>
+                        </div>
+                </div>
+                
+                <div class="form-group" style="display: none;">
+                        <label for="services">Services (comma-separated) 📝</label>
+                        <input type="text" id="services" name="services" 
+                               placeholder="WhatsApp API, Business Communication, Demo Booking">
+                        <small class="form-help">⚠️ Storage only - Not used in prompts</small>
+                </div>
+                
+                    <div class="form-group" style="display: none;">
+                        <label for="expertise">Expertise (comma-separated) 📝</label>
+                        <input type="text" id="expertise" name="expertise" 
+                               placeholder="Sales, Product Demos, Customer Service">
+                        <small class="form-help">⚠️ Storage only - Not used in prompts</small>
+                    </div>
+
+                    <h3>📞 Call Configuration</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="maxCallDuration">Max Call Duration (seconds)</label>
+                            <input type="number" id="maxCallDuration" name="max_call_duration" 
+                                   placeholder="600" min="60" step="60">
+                            <small class="form-help">Maximum duration allowed for a call</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="inactivityCheckDuration">Inactivity Check (seconds)</label>
+                            <input type="number" id="inactivityCheckDuration" name="inactivity_check_duration" 
+                                   placeholder="10" min="5" step="1">
+                            <small class="form-help">Time to wait before checking for silence</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="silenceMaxRetries">Silence Max Retries</label>
+                            <input type="number" id="silenceMaxRetries" name="max_retries" 
+                                   placeholder="3" min="0" step="1">
+                            <small class="form-help">Max retries when silence is detected</small>
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label for="inactivityMessage">Inactivity Message</label>
+                            <input type="text" id="inactivityMessage" name="inactivity_message" 
+                                   placeholder="Are you still there?">
+                            <small class="form-help">Message to play when user is silent</small>
+                        </div>
+                    </div>
+                    
+                    <!-- ==================== Prompt Configuration Section ==================== -->
+                    <div class="config-section">
+                        <div class="config-header" onclick="toggleConfigSection(this)">
+                            <div class="config-header-left">
+                                <span class="collapse-icon">▼</span>
+                                <h3>💬 Prompt Configuration</h3>
+                            </div>
+                            <button type="button" class="help-toggle" onclick="event.stopPropagation(); toggleHelp('promptHelp')">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                        
+                        <div id="promptHelp" class="help-box" style="display: none;">
+                            <h4>📖 About Prompt Configuration</h4>
+                            <p>Defines the Agent's conversation behavior and response patterns.</p>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 Greeting Template</strong>
+                                <p>The initial message when Agent starts conversation with user.</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong><br>
+                                    "Hello! I'm your AI assistant. How may I help you today?"
+                                </div>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 Realtime Template</strong> <span class="required-badge">REQUIRED</span>
+                                <p>Main prompt that controls Agent's conversation logic and response style. This is the most important configuration.</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong><br>
+                                    "You are a professional customer service agent. Your goal is to understand customer needs and provide helpful solutions. Always be polite and concise."
+                                </div>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 Language Instructions (Accent Configuration)</strong>
+                                <p>Configure specific accents/dialects for each language (JSON format). The agent will use these accents when speaking in the corresponding language.</p>
+                                
+                                <div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                                    <strong style="color: #1e40af;">💡 How it works with Auto Accent Adaptation:</strong>
+                                    <ul style="margin: 8px 0; padding-left: 20px; color: #1e3a8a; font-size: 13px;">
+                                        <li><strong>Configured languages:</strong> Use the specified accent</li>
+                                        <li><strong>Unconfigured languages (Auto Accent = ON):</strong> Automatically adapt to caller's accent</li>
+                                        <li><strong>Unconfigured languages (Auto Accent = OFF):</strong> Use neutral professional accent</li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                                    <strong style="color: #92400e;">⭐ Dynamic Accent Switching (Priority Rule):</strong>
+                                    <p style="margin: 8px 0 0 0; color: #78350f; font-size: 13px;">
+                                        <strong>When Auto Accent Adaptation is ENABLED:</strong><br>
+                                        If the user explicitly requests a specific accent during conversation (e.g., "please speak with American accent", "用印度口音说话", "請用香港口音"), 
+                                        the agent will <strong>immediately switch</strong> to that accent. User's explicit accent request <strong>takes highest priority</strong> and overrides 
+                                        both configured accents and automatic adaptation.
+                                    </p>
+                                    <p style="margin: 8px 0 0 0; color: #78350f; font-size: 13px;">
+                                        <strong>When Auto Accent Adaptation is DISABLED:</strong><br>
+                                        Accents are <strong>FIXED</strong> and cannot be changed during conversation. The agent will maintain the configured accent (or neutral accent if not configured) 
+                                        throughout the entire conversation for consistency and professionalism.
+                                    </p>
+                                </div>
+                                
+                                <div class="example-box" style="margin-top: 12px;">
+                                    <strong>Example Configuration:</strong><br>
+                                    <pre>{
+  "en": "singapore",
+  "zh": "mainland",
+  "yue": "hongkong"
+}</pre>
+                                </div>
+                                
+                                <details style="margin-top: 12px; padding: 12px; background: #fefce8; border-radius: 6px; border: 1px solid #fbbf24;">
+                                    <summary style="cursor: pointer; font-weight: 600; color: #92400e; user-select: none;">
+                                        📋 View all supported accents (click to expand)
+                                    </summary>
+                                    <div style="margin-top: 12px; font-size: 13px; color: #78350f;">
+                                        <div style="margin-bottom: 16px;">
+                                            <strong style="color: #1e40af;">🇬🇧 English (en):</strong>
+                                            <div style="margin-left: 12px; margin-top: 4px;">
+                                                <strong>Asian:</strong> india, singapore, malaysia, philippines, hongkong<br>
+                                                <strong>Western:</strong> us, uk, australia, newzealand, canada, ireland, scotland<br>
+                                                <strong>African:</strong> southafrica, nigeria, kenya<br>
+                                                <strong>US Regional:</strong> southern, newyork, boston<br>
+                                                <strong>UK Regional:</strong> london, liverpool, manchester
+                                            </div>
+                                        </div>
+                                        <div style="margin-bottom: 16px;">
+                                            <strong style="color: #1e40af;">🇨🇳 Chinese (zh):</strong>
+                                            <div style="margin-left: 12px; margin-top: 4px;">
+                                                mainland, taiwan, singapore
+                                            </div>
+                                        </div>
+                                        <div style="margin-bottom: 16px;">
+                                            <strong style="color: #1e40af;">🇭🇰 Cantonese (yue):</strong>
+                                            <div style="margin-left: 12px; margin-top: 4px;">
+                                                hongkong, guangdong
+                                            </div>
+                                        </div>
+                                        <div style="margin-bottom: 16px;">
+                                            <strong style="color: #1e40af;">🇪🇸 Spanish (es):</strong>
+                                            <div style="margin-left: 12px; margin-top: 4px;">
+                                                spain, mexico, latin
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="margin-top: 20px; padding: 16px; background: #e0f2fe; border-left: 4px solid #0284c7; border-radius: 4px;">
+                                            <strong style="color: #0c4a6e; display: block; margin-bottom: 8px;">✨ Custom Accent Descriptions</strong>
+                                            <p style="margin: 0 0 12px 0; color: #075985; font-size: 12px;">
+                                                If the accent you need is not in the list above, you can provide a custom description instead of using a preset keyword. 
+                                                The agent will use your description to guide its pronunciation and speaking style.
+                                            </p>
+                                            <details style="margin-top: 8px;">
+                                                <summary style="cursor: pointer; color: #0369a1; font-weight: 600; user-select: none;">
+                                                    💡 Click to see custom accent example
+                                                </summary>
+                                                <div style="margin-top: 12px; padding: 12px; background: white; border-radius: 4px; border: 1px solid #bae6fd;">
+                                                    <strong style="color: #0c4a6e;">Example - Custom Indian English accent:</strong>
+                                                    <pre style="margin: 8px 0 0 0; padding: 12px; background: #f8fafc; border-radius: 4px; font-size: 11px; line-height: 1.6; color: #334155; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;">{
+  "en": "🇮🇳 English (STRONG Indian accent): EMPHASIZE Indian English pronunciation with PROMINENT retroflex consonants (especially t, d, n), DISTINCTIVE rolling 'r' sounds, characteristic head-wobble intonation patterns, CLEAR syllable stress differences. Pronounce 'th' as 't/d' (e.g., 'tank you' not 'thank you'), pronounce 'v/w' distinctly (e.g., 'very vell'). Use AUTHENTIC Indian rhythm and melody in speech. Natural Hindi/regional language code-mixing is encouraged."
+}</pre>
+                                                    <p style="margin: 12px 0 0 0; font-size: 11px; color: #64748b;">
+                                                        <strong>💡 Tips for custom descriptions:</strong><br>
+                                                        • Be specific about pronunciation patterns<br>
+                                                        • Describe intonation and rhythm characteristics<br>
+                                                        • Mention distinctive features (e.g., retroflex sounds, glottal stops)<br>
+                                                        • Include example pronunciations if helpful<br>
+                                                        • Reference cultural or regional speaking styles
+                                                    </p>
+                                                </div>
+                                            </details>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🌐 Auto Language Switching</strong>
+                                <p>When enabled, the agent automatically switches to match the caller's language. This helps provide a more natural and comfortable experience for callers speaking different languages.</p>
+                                <div class="example-box">
+                                    <strong>Default:</strong> Enabled<br>
+                                    <strong>Use Case:</strong> International customer support, multi-language services
+                                </div>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🗣️ Auto Accent Adaptation</strong>
+                                <p>Controls whether the agent can dynamically adapt its accent during conversation.</p>
+                                
+                                <div style="margin-top: 8px; padding: 10px; background: #f0fdf4; border-left: 3px solid #22c55e; border-radius: 4px;">
+                                    <strong style="color: #166534;">✅ When ENABLED (Default):</strong>
+                                    <ul style="margin: 6px 0; padding-left: 20px; font-size: 13px; color: #15803d;">
+                                        <li>Agent can automatically adapt to caller's accent</li>
+                                        <li>User can explicitly request accent changes during conversation (e.g., "use American accent")</li>
+                                        <li>Creates a more relatable and personalized experience</li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 8px; padding: 10px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
+                                    <strong style="color: #991b1b;">❌ When DISABLED:</strong>
+                                    <ul style="margin: 6px 0; padding-left: 20px; font-size: 13px; color: #991b1b;">
+                                        <li>Accent is FIXED throughout the conversation</li>
+                                        <li>Uses configured accent (or neutral if not configured)</li>
+                                        <li>Agent will NOT change accent even if user requests it</li>
+                                        <li>Ensures consistent and professional experience</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="example-box" style="margin-top: 8px;">
+                                    <strong>Use Cases:</strong><br>
+                                    <strong>Enable:</strong> Regional customer service, international support, personalized interactions<br>
+                                    <strong>Disable:</strong> Corporate communication, formal settings, brand consistency requirements
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-body">
+                            <div class="form-group">
+                                <label for="greetingTemplate">Greeting Template</label>
+                                <textarea id="greetingTemplate" name="greeting_template" rows="4" 
+                                          placeholder="Enter greeting template..."></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="realtimeTemplate">Realtime Template *</label>
+                                <textarea id="realtimeTemplate" name="realtime_template" rows="6" 
+                                          placeholder="Enter realtime conversation template..."></textarea>
+                                <small class="form-help">Main conversation prompt used during calls</small>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="systemInstructions">System Instructions 📝</label>
+                                <textarea id="systemInstructions" name="system_instructions" rows="3" 
+                                          placeholder="Enter system-level instructions..."></textarea>
+                                <small class="form-help">⚠️ Storage only - Use GreetingTemplate/RealtimeTemplate instead</small>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="conversationFlow">Conversation Flow (comma-separated steps) 📝</label>
+                                <input type="text" id="conversationFlow" name="conversation_flow" 
+                                       placeholder="greet, identify_need, provide_info, schedule_followup">
+                                <small class="form-help">⚠️ Storage only - No flow control logic</small>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="exampleDialogues">Example Dialogues (JSON format) 📝</label>
+                                <textarea id="exampleDialogues" name="example_dialogues" rows="5" 
+                                          placeholder='Enter JSON format, e.g., {"en": "User: Hi - Agent: Hello!", "zh": "用户: 你好 - 客服: 您好！"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">⚠️ Storage only - Not injected into prompts</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="languageInstructions">Language Instructions (JSON format)</label>
+                                <textarea id="languageInstructions" name="language_instructions" rows="4" 
+                                          placeholder='Enter JSON format, e.g., {"en": "Speak in professional English", "zh": "请用标准普通话交流"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">Language-specific instructions (JSON object)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="autoLanguageSwitching" name="auto_language_switching" checked style="margin-right: 8px;">
+                                    <span>🌐 Auto Language Switching</span>
+                                </label>
+                                <small class="form-help">Enable automatic language switching based on caller's language (Default: Enabled)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="autoAccentAdaptation" name="auto_accent_adaptation" checked style="margin-right: 8px;">
+                                    <span>🗣️ Auto Accent Adaptation</span>
+                                </label>
+                                <small class="form-help">Enable automatic accent adaptation based on caller's region (Default: Enabled)</small>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="customVariables">Custom Variables (JSON format) 📝</label>
+                                <textarea id="customVariables" name="custom_variables" rows="3" 
+                                          placeholder='Enter JSON format, e.g., {"company_url": "https://example.com", "support_email": "support@example.com"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">⚠️ Storage only - Not used in template replacement</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ==================== Outbound Call Configuration Section ==================== -->
+                    <div class="config-section">
+                        <div class="config-header" onclick="toggleConfigSection(this)">
+                            <div class="config-header-left">
+                                <span class="collapse-icon">▼</span>
+                                <h3>📞 Outbound Call Configuration</h3>
+                            </div>
+                            <button type="button" class="help-toggle" onclick="event.stopPropagation(); toggleHelp('outboundHelp')">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                        
+                        <div id="outboundHelp" class="help-box" style="display: none;">
+                            <h4>📖 About Outbound Call Configuration</h4>
+                            <p>Configuration specific to outbound calls initiated by the agent.</p>
+                        </div>
+                        
+                        <div class="config-body">
+                            <div class="form-group">
+                                <label for="outboundGreetingTemplate">Outbound Greeting Template</label>
+                                <textarea id="outboundGreetingTemplate" name="outbound_greeting_template" rows="4" 
+                                          placeholder="Enter outbound greeting template..."></textarea>
+                                <small class="form-help">Greeting message for outbound calls</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="outboundRealtimeTemplate">Outbound Realtime Template</label>
+                                <textarea id="outboundRealtimeTemplate" name="outbound_realtime_template" rows="6" 
+                                          placeholder="Enter outbound conversation template..."></textarea>
+                                <small class="form-help">Main conversation prompt used during outbound calls</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="outboundIntegratedActions">Outbound Integrated Actions (JSON format)</label>
+                                <textarea id="outboundIntegratedActions" name="outbound_integrated_actions" rows="4" 
+                                          placeholder='[{"action_id": "...", "at_id": "...", "type": "internal"}]'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">List of integrated actions for outbound calls (JSON array)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== Integrated Actions Section ==================== -->
+                    <div class="config-section">
+                        <div class="config-header" onclick="toggleConfigSection(this)">
+                            <div class="config-header-left">
+                                <span class="collapse-icon">▼</span>
+                                <h3>🔗 Integrated Actions (Inbound)</h3>
+                            </div>
+                            <button type="button" class="help-toggle" onclick="event.stopPropagation(); toggleHelp('actionsHelp')">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                        
+                        <div id="actionsHelp" class="help-box" style="display: none;">
+                            <h4>📖 About Integrated Actions</h4>
+                            <p>Configure integrated actions that the agent can perform during inbound calls.</p>
+                        </div>
+                        
+                        <div class="config-body">
+                            <div class="form-group">
+                                <label for="integratedActions">Integrated Actions (JSON format)</label>
+                                <textarea id="integratedActions" name="integrated_actions" rows="4" 
+                                          placeholder='[{"action_id": "...", "at_id": "...", "type": "internal"}]'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">List of integrated actions for inbound calls (JSON array)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== RAG Configuration Section ==================== -->
+                    <div class="config-section">
+                        <div class="config-header" onclick="toggleConfigSection(this)">
+                            <div class="config-header-left">
+                                <span class="collapse-icon">▼</span>
+                                <h3>🔗 RAG Configuration</h3>
+                            </div>
+                            <button type="button" class="help-toggle" onclick="event.stopPropagation(); toggleHelp('ragHelp')">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                        
+                        <div id="ragHelp" class="help-box" style="display: none;">
+                            <h4>📖 About RAG Configuration</h4>
+                            <p>Retrieval-Augmented Generation (RAG) allows the Agent to retrieve relevant information from external knowledge bases to enhance responses.</p>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 RAG Enabled</strong>
+                                <p>Enable or disable RAG functionality for this Agent.</p>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 RAG Base URL</strong>
+                                <p>The base URL endpoint for the RAG service API.</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong> https://api.example.com/v1/workflows/run
+                                </div>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 RAG Token</strong>
+                                <p>Authentication token for accessing the RAG service.</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong> app-xxxxxxxxxxxx
+                                </div>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 RAG Description</strong>
+                                <p>A description of this RAG configuration for documentation and logging purposes.</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong> Knowledge base for product information
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-body">
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="ragEnabled" name="rag_enabled">
+                                    <span class="checkmark"></span>
+                                    Enable RAG
+                                </label>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ragBaseUrl">RAG Base URL</label>
+                                    <input type="text" id="ragBaseUrl" name="rag_base_url" 
+                                           placeholder="https://api.example.com/v1/workflows/run">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ragToken">RAG Token</label>
+                                    <input type="text" id="ragToken" name="rag_token" 
+                                           placeholder="app-xxxxxxxxxxxx">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group" style="display: none;">
+                                    <label for="ragWorkflowId">RAG Workflow ID 📝</label>
+                                    <input type="text" id="ragWorkflowId" name="rag_workflow_id" 
+                                           placeholder="workflow_xxxxxxxxxxxxx">
+                                    <small class="form-help">⚠️ Storage only - Not used in RAG client</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ragDescription">RAG Description</label>
+                                    <input type="text" id="ragDescription" name="rag_description" 
+                                           placeholder="Knowledge base for product information">
+                                    <small class="form-help">Used for logging and documentation</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="ragHeaders">RAG Headers (JSON format) 📝</label>
+                                <textarea id="ragHeaders" name="rag_headers" rows="3" 
+                                          placeholder='Enter JSON format, e.g., {"Content-Type": "application/json", "X-Custom-Header": "value"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">⚠️ Storage only - Headers are hardcoded in client</small>
+                            </div>
+                            
+                            <div class="form-row" style="display: none;">
+                                <div class="form-group">
+                                    <label for="ragTimeout">RAG Timeout (seconds) 📝</label>
+                                    <input type="number" id="ragTimeout" name="rag_timeout" 
+                                           min="1" max="300" placeholder="30">
+                                    <small class="form-help">⚠️ Storage only - Fixed at 30s in client</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ragMaxRetries">RAG Max Retries 📝</label>
+                                    <input type="number" id="ragMaxRetries" name="rag_max_retries" 
+                                           min="0" max="10" placeholder="3">
+                                    <small class="form-help">⚠️ Storage only - No retry logic implemented</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ==================== API Configuration Section ==================== -->
+                    <div class="config-section">
+                        <div class="config-header" onclick="toggleConfigSection(this)">
+                            <div class="config-header-left">
+                                <span class="collapse-icon">▼</span>
+                                <h3>🔌 API Configuration</h3>
+                            </div>
+                            <button type="button" class="help-toggle" onclick="event.stopPropagation(); toggleHelp('apiHelp')">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                        
+                        <div id="apiHelp" class="help-box" style="display: none;">
+                            <h4>📖 About API Configuration</h4>
+                            <p>Configure external API integrations for the Agent to interact with third-party services.</p>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 API Endpoints</strong>
+                                <p>Define custom API endpoints that the Agent can call (JSON format).</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong><br>
+                                    <pre>{
+  "get_user_info": {
+    "url": "https://api.example.com/users/{user_id}",
+    "method": "GET",
+    "headers": {"Authorization": "Bearer TOKEN"}
+  },
+  "create_ticket": {
+    "url": "https://api.example.com/tickets",
+    "method": "POST"
+  }
+}</pre>
+                                </div>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 API Keys</strong>
+                                <p>Store API authentication keys and secrets (JSON format).</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong><br>
+                                    <pre>{
+  "service_a": "key_abc123xyz",
+  "service_b": "secret_def456uvw"
+}</pre>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <strong>⚠️ Security Notice:</strong> API keys are sensitive. Use environment variables or secure vaults in production.
+                            </div>
+                        </div>
+                        
+                        <div class="config-body">
+                            <div class="form-group">
+                                <label for="apiEndpoints">API Endpoints (JSON format)</label>
+                                <textarea id="apiEndpoints" name="api_endpoints" rows="4" 
+                                          placeholder='Enter JSON format, e.g., {"booking": "https://api.example.com/bookings", "calendar": "https://api.example.com/calendar"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">Map of endpoint names to URLs (JSON object)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="apiTokens">API Tokens (JSON format)</label>
+                                <textarea id="apiTokens" name="api_tokens" rows="3" 
+                                          placeholder='Enter JSON format, e.g., {"booking_api": "token_xxx", "calendar_api": "token_yyy"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">Map of service names to auth tokens (JSON object)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="apiHeaders">API Headers (JSON format)</label>
+                                <textarea id="apiHeaders" name="api_headers" rows="3" 
+                                          placeholder='Enter JSON format, e.g., {"Content-Type": "application/json", "Accept": "application/json"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">Common headers for API calls (JSON object)</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ==================== Business Rules Section ==================== -->
+                    <div class="config-section">
+                        <div class="config-header" onclick="toggleConfigSection(this)">
+                            <div class="config-header-left">
+                                <span class="collapse-icon">▼</span>
+                                <h3>📋 Business Rules</h3>
+                            </div>
+                            <button type="button" class="help-toggle" onclick="event.stopPropagation(); toggleHelp('businessHelp')">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                        
+                        <div id="businessHelp" class="help-box" style="display: none;">
+                            <h4>📖 About Business Rules</h4>
+                            <p>Define operational rules, constraints, and permissions for the Agent's behavior.</p>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 Allowed Actions</strong>
+                                <p>Comma-separated list of actions the Agent is permitted to perform. This is a whitelist approach.</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong> book_appointment, send_whatsapp_message, get_user_info
+                                </div>
+                                <div class="alert alert-info">
+                                    <strong>🔗 Related:</strong> These actions should match the function names defined in <strong>Function Call Rules</strong>.
+                                </div>
+                            </div>
+                            
+                            <div class="field-doc">
+                                <strong>🎯 Function Call Rules</strong> <span class="required-badge">IMPORTANT</span>
+                                <p>Defines dynamic functions the Agent can call during conversations. Each function specifies its description, trigger conditions, and parameter schema.</p>
+                                <div class="example-box">
+                                    <strong>Example:</strong><br>
+                                    <pre>{
+  "book_appointment": {
+    "description": "Send a booking template for appointments",
+    "when": "user wants to schedule a meeting",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "whatsappNumber": {
+          "type": "string",
+          "description": "User's WhatsApp number"
+        },
+        "meetingTime": {
+          "type": "string",
+          "description": "ISO 8601 format"
+        }
+      },
+      "required": ["whatsappNumber", "meetingTime"]
+    }
+  }
+}</pre>
+                                </div>
+                                <div class="alert alert-info">
+                                    <strong>🔗 Integration:</strong> If a matching endpoint is defined in <strong>API Configuration</strong>, the API will be called. Otherwise, a WhatsApp booking template is used.
+                                </div>
+                                <div class="alert alert-warning">
+                                    <strong>⚠️ Whitelist:</strong> Functions defined here must also be listed in <strong>Allowed Actions</strong> to be executable.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-body">
+                            <div class="form-group">
+                                <label for="allowedActions">Allowed Actions (comma-separated)</label>
+                                <input type="text" id="allowedActions" name="allowed_actions" 
+                                       value="send_sales_summary"
+                                       placeholder="send_sales_summary">
+                                <small class="form-help">Actions the agent is allowed to perform (default: 2 general-purpose tools)</small>
+                            </div>
+                            
+                            <div class="form-group" style="opacity: 0.6;">
+                                <label for="requiredFields">Required Fields (comma-separated) <span style="color: #f59e0b; font-weight: bold;">⚠️ DEPRECATED</span></label>
+                                <input type="text" id="requiredFields" name="required_fields" 
+                                       placeholder="This field is no longer used" disabled>
+                                <small class="form-help" style="color: #dc2626;">
+                                    ⚠️ <strong>Deprecated:</strong> This field is no longer used. Use <strong>FunctionCallRules</strong> to define custom required parameters instead.
+                                </small>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="validationRules">Validation Rules (JSON format) 🚧</label>
+                                <textarea id="validationRules" name="validation_rules" rows="3" 
+                                          placeholder='Enter JSON format, e.g., {"email": "^[^@]+@[^@]+\\.[^@]+$", "phone": "^\\+?[1-9]\\d{1,14}$"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">⚠️ Not enforced - Future feature</small>
+                            </div>
+                            
+                            <div class="form-row" style="display: none;">
+                                <div class="form-group">
+                                    <label for="maxConversationTime">Max Conversation Time (minutes) 🚧</label>
+                                    <input type="number" id="maxConversationTime" name="max_conversation_time" 
+                                           min="1" max="120" placeholder="30">
+                                    <small class="form-help">⚠️ Not enforced - Future feature</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="workingHoursTimezone">Working Hours Timezone 🚧</label>
+                                    <input type="text" id="workingHoursTimezone" name="working_hours_timezone" 
+                                           placeholder="America/New_York">
+                                    <small class="form-help">⚠️ Not enforced - Future feature</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="workingHoursSchedule">Working Hours Schedule (JSON format) 🚧</label>
+                                <textarea id="workingHoursSchedule" name="working_hours_schedule" rows="5" 
+                                          placeholder='Enter JSON format, e.g., {"monday": "09:00-17:00", "tuesday": "09:00-17:00"}'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">⚠️ Not enforced - Future feature</small>
+                            </div>
+                            
+                            <div class="form-group" style="display: none;">
+                                <label for="escalationRules">Escalation Rules (JSON format) 🚧</label>
+                                <textarea id="escalationRules" name="escalation_rules" rows="5" 
+                                          placeholder='Enter JSON array, e.g., [{"condition": "user_frustrated", "action": "transfer_to_human", "target": "support@example.com"}]'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">⚠️ Not enforced - Future feature</small>
+                            </div>
+                            
+                            <h4 style="margin-top: 24px; margin-bottom: 12px; color: #667eea;">🔧 Function Call Rules</h4>
+                            <div style="background: #f0f7ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2196F3; margin-bottom: 16px;">
+                                <p style="margin: 0; font-size: 13px; color: #555;">
+                                    💡 <strong>Configure dynamic functions</strong> that the agent can call. Each function needs:
+                                    <br>• <strong>Description</strong>: What the function does
+                                    <br>• <strong>When</strong>: Trigger conditions (optional)
+                                    <br>• <strong>Parameters</strong>: OpenAI function parameters schema (optional)
+                                </p>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="functionCallRules">Function Call Rules (JSON format)</label>
+                                <textarea id="functionCallRules" name="function_call_rules" rows="12" 
+                                          placeholder='Copy from JSON editor below (default: send_sales_summary)'
+                                          style="font-family: monospace; font-size: 13px;"></textarea>
+                                <small class="form-help">
+                                    ⚙️ Define functions the agent can call. Function name as key → { description, when, parameters }
+                                    <br>📚 <strong>Parameters</strong> follows OpenAI function calling schema format
+                                    <br>🔗 If <strong>API Config</strong> has matching endpoint, API will be called; otherwise WhatsApp booking template is used
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab: JSON Editor -->
+                <div id="tabJson" class="tab-content" style="display: none;">
+                    <div class="form-group">
+                        <label for="agentConfigJson">Agent Config (JSON)</label>
+                        <textarea id="agentConfigJson" name="agent_config_json" rows="20" 
+                                  placeholder='Enter complete agent_config JSON here (Advanced users only)'
+                                  style="font-family: monospace; font-size: 13px;"></textarea>
+                        <small class="form-help">⚠️ Advanced: Edit the complete agent_config JSON directly. Invalid JSON will prevent saving.</small>
+                        <div class="json-validation" id="jsonValidation" style="margin-top: 10px;"></div>
+                    </div>
+                    
+                    <div class="json-actions">
+                        <button type="button" class="btn btn-outline" onclick="validateJson()">
+                            <span class="btn-icon">✓</span>
+                            Validate JSON
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="formatJson()">
+                            <span class="btn-icon">📝</span>
+                            Format JSON
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="loadDefaultConfig()">
+                            <span class="btn-icon">📋</span>
+                            Load Template
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAgentModal()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-outline" id="previewPromptBtn">
+                    <span class="btn-icon">👁️</span>
+                    Preview Prompt
+                </button>
+                <button type="submit" class="btn btn-primary" id="saveAgentBtn" form="agentForm">
+                    <span class="btn-icon">💾</span>
+                    Save Agent
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt Preview Modal -->
+    <div class="modal-overlay" id="promptPreviewModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2>📋 Prompt Preview</h2>
+                <button class="modal-close" onclick="closePromptPreviewModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="prompt-preview-container">
+                    <div class="agent-info-preview">
+                        <div class="info-item">
+                            <span class="info-label">Agent Name:</span>
+                            <span class="info-value" id="previewAgentName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Type:</span>
+                            <span class="info-value" id="previewAgentType">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Voice:</span>
+                            <span class="info-value" id="previewVoice">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Speed:</span>
+                            <span class="info-value" id="previewSpeed">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="prompt-content-preview">
+                        <h4>System Prompt:</h4>
+                        <div class="prompt-text" id="previewPromptText"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closePromptPreviewModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Prompt Generator Modal -->
+    <div class="modal-overlay" id="aiGeneratorModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2>✨ AI Smart Configuration Generator</h2>
+                <button class="modal-close" onclick="closeAIGeneratorModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="aiGeneratorInput">Describe your Agent requirements</label>
+                    <textarea id="aiGeneratorInput" rows="6" 
+                              placeholder="For example: I need a friendly and professional customer service Agent to handle product inquiries and demo bookings. Primary audience is enterprise clients, requiring an enthusiastic and patient tone. Support bilingual (English and Chinese), main functions include product introduction, demo booking, technical support, etc."></textarea>
+                    <small class="form-help">💡 Describe the Agent's role, target audience, tone, main functions, language requirements, etc. in detail. AI will generate complete configuration based on this.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Generation Mode</label>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label class="checkbox-label" style="border: 2px solid #4CAF50; padding: 12px; border-radius: 8px; background: #f9fff9;">
+                            <input type="radio" name="generateMode" id="generateFullConfig" value="full" checked onchange="toggleTemplateSelection()">
+                            <span class="checkmark"></span>
+                            <strong>🎯 Generate Full Configuration</strong>
+                            <small style="display: block; margin-left: 24px; color: #666;">
+                                Automatically generate Persona, Tone, Language, Voice, Services, Expertise and all Prompts
+                            </small>
+                        </label>
+                        <label class="checkbox-label" style="border: 2px solid #2196F3; padding: 12px; border-radius: 8px; background: #f5f9ff;">
+                            <input type="radio" name="generateMode" id="generatePromptOnly" value="prompt" onchange="toggleTemplateSelection()">
+                            <span class="checkmark"></span>
+                            <strong>📝 Generate Prompts Only</strong>
+                            <small style="display: block; margin-left: 24px; color: #666;">
+                                Generate specified Prompt templates based on current form configuration
+                            </small>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="templateSelection" style="display: none;">
+                    <label>Select templates to generate</label>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="generateGreeting" checked>
+                            <span class="checkmark"></span>
+                            Greeting Template
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="generateRealtime" checked>
+                            <span class="checkmark"></span>
+                            Realtime Template
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="generateSystemInstructions" checked>
+                            <span class="checkmark"></span>
+                            System Instructions
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="aiGeneratorResult" style="display: none; margin-top: 20px;">
+                    <h3>✅ Generation Result</h3>
+                    <div id="aiGeneratorResultContent"></div>
+                </div>
+                
+                <div id="aiGeneratorError" style="display: none; margin-top: 20px; color: #f44336;">
+                    <strong>❌ Generation Failed:</strong>
+                    <span id="aiGeneratorErrorMessage"></span>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAIGeneratorModal()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="generatePromptBtn" onclick="generatePromptWithAI()">
+                    <span class="btn-icon">✨</span> Generate Full Configuration
+                </button>
+                <button type="button" class="btn btn-success" id="applyGeneratedPromptBtn" onclick="applyGeneratedPrompt()" style="display: none;">
+                    <span class="btn-icon">✅</span> Apply to Form
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Brandkit Generator Modal -->
+    <div class="modal-overlay" id="brandkitGeneratorModal">
+        <div class="modal modal-medium">
+            <div class="modal-header">
+                <h2>🎨 Generate from Brandkit</h2>
+                <button class="modal-close" onclick="closeBrandkitGeneratorModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 16px; border-radius: 8px; color: white; margin-bottom: 20px;">
+                    <p style="margin: 0; font-size: 14px;">
+                        🔗 Enter Text Agent ID, the system will automatically fetch brand information from Brandkit API and use AI to generate complete Voice Agent configuration
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label for="textAgentId">Text Agent ID <span style="color: #f44336;">*</span></label>
+                    <input type="text" id="textAgentId" 
+                           placeholder="e.g: bf214779-d086-4ac3-96a7-639e549f00f5">
+                    <small class="form-help">💡 Provide the Text Agent's UUID, system will fetch corresponding brandkit data</small>
+                </div>
+                
+                <div id="brandkitGeneratorResult" style="display: none; margin-top: 20px;">
+                    <h3>✅ Generation Result</h3>
+                    <div id="brandkitGeneratorResultContent"></div>
+                </div>
+                
+                <div id="brandkitGeneratorError" style="display: none; margin-top: 20px; padding: 12px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 4px;">
+                    <strong style="color: #c62828;">❌ Generation Failed:</strong>
+                    <div id="brandkitGeneratorErrorMessage" style="color: #d32f2f; margin-top: 8px;"></div>
+                </div>
+                
+                <div id="brandkitGeneratorLoading" style="display: none; margin-top: 20px; text-align: center; padding: 20px;">
+                    <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="margin-top: 12px; color: #666;">Fetching data from Brandkit and generating configuration...</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeBrandkitGeneratorModal()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="generateFromBrandkitBtn" onclick="generateConfigFromBrandkit()">
+                    <span class="btn-icon">🎨</span> Generate Configuration
+                </button>
+                <button type="button" class="btn btn-success" id="applyBrandkitConfigBtn" onclick="applyBrandkitConfig()" style="display: none;">
+                    <span class="btn-icon">✅</span> Apply to Form
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Create Agent Modal -->
+    <div class="modal-overlay" id="quickCreateModal">
+        <div class="modal modal-medium">
+            <div class="modal-header">
+                <h2>⚡ Quick Create Agent</h2>
+                <button class="modal-close" onclick="closeQuickCreateModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 8px; color: white; margin-bottom: 20px;">
+                    <p style="margin: 0; font-size: 14px;">
+                        ⚡ Quick Create: Enter Tenant ID and Text Agent ID, the system will automatically create tenant (if not exists), fetch Brandkit configuration, generate Voice Agent, and configure RAG integration
+                    </p>
+                </div>
+
+                <form id="quickCreateForm">
+                    <div class="form-group">
+                        <label for="quickCreateTenantId">Tenant ID <span style="color: #f44336;">*</span></label>
+                        <input type="text" id="quickCreateTenantId" required
+                               placeholder="e.g: clare_001">
+                        <small class="form-help">🏢 Tenant identifier. If tenant does not exist, the system will create it automatically</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="quickCreateTextAgentId">Text Agent ID <span style="color: #f44336;">*</span></label>
+                        <input type="text" id="quickCreateTextAgentId" required
+                               placeholder="e.g: bf214779-d086-4ac3-96a7-639e549f00f5">
+                        <small class="form-help">🎨 Text Agent UUID, used to fetch Brandkit configuration</small>
+                    </div>
+                    
+                    <div style="background: #f5f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2196F3; margin-top: 20px;">
+                        <h4 style="margin: 0 0 8px 0; color: #1976D2;">📋 Automated Steps</h4>
+                        <ol style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                            <li>Check and create tenant (if not exists)</li>
+                            <li>Fetch brand configuration from Brandkit API</li>
+                            <li>Use AI to generate Agent configuration (Persona, Prompts, etc.)</li>
+                            <li>Configure RAG integration</li>
+                            <li>Create Voice Agent</li>
+                        </ol>
+                    </div>
+                </form>
+                
+                <div id="quickCreateResult" style="display: none; margin-top: 20px;">
+                    <h3 style="color: #4CAF50;">✅ Created Successfully</h3>
+                    <div id="quickCreateResultContent"></div>
+                </div>
+                
+                <div id="quickCreateError" style="display: none; margin-top: 20px; padding: 12px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 4px;">
+                    <strong style="color: #c62828;">❌ Creation Failed:</strong>
+                    <div id="quickCreateErrorMessage" style="color: #d32f2f; margin-top: 8px;"></div>
+                </div>
+                
+                <div id="quickCreateLoading" style="display: none; margin-top: 20px; text-align: center; padding: 20px;">
+                    <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="margin-top: 12px; color: #666;">Creating agent, please wait...</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeQuickCreateModal()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-success" id="executeQuickCreateBtn" onclick="executeQuickCreate()">
+                    <span class="btn-icon">⚡</span> Quick Create
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2>🗑️ Delete Agent</h2>
+                <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <p>Are you sure you want to delete this agent?</p>
+                <div class="delete-warning">
+                    <strong id="deleteAgentName"></strong>
+                    <br>
+                    <small>This action cannot be undone.</small>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <span class="btn-icon">🗑️</span>
+                    Delete Agent
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- API Client with Key Validation -->
+    <script src="/static/js/api_client.js"></script>
+    <script src="/static/js/agent_management.js"></script>
+    
+    <script>
+        // ============================================
+        // Helper Functions
+        // ============================================
+        
+        // Helper function to properly decode newlines and special characters in text
+        function decodeTextNewlines(text) {
+            if (!text) return '';
+            // Convert literal \n, \r\n, \t to actual newlines and tabs
+            return text.replace(/\\n/g, '\n')
+                      .replace(/\\r\\n/g, '\n')
+                      .replace(/\\t/g, '\t');
+        }
+        
+        // Toggle config section collapse/expand
+        function toggleConfigSection(header) {
+            const section = header.closest('.config-section');
+            section.classList.toggle('collapsed');
+        }
+        
+        // Toggle help box visibility
+        function toggleHelp(helpId) {
+            const helpBox = document.getElementById(helpId);
+            if (helpBox) {
+                const isVisible = helpBox.style.display !== 'none';
+                helpBox.style.display = isVisible ? 'none' : 'block';
+            }
+        }
+        
+        // ============================================
+        // UI Functions
+        // ============================================
+        
+        // Handle tone selection and custom input
+        function handleToneChange(selectElement) {
+            const toneInput = document.getElementById('tone');
+            const toneHelp = document.getElementById('toneHelp');
+            const selectedValue = selectElement.value;
+            
+            if (selectedValue === '__custom__') {
+                // Show custom input field
+                toneInput.style.display = 'block';
+                toneHelp.style.display = 'block';
+                toneInput.value = '';
+                toneInput.focus();
+            } else {
+                // Hide custom input and use selected value
+                toneInput.style.display = 'none';
+                toneHelp.style.display = 'none';
+                toneInput.value = selectedValue;
+            }
+        }
+        
+        // Update speed display value
+        function updateSpeedDisplay(value) {
+            const speedValueEl = document.getElementById('speedValue');
+            if (speedValueEl) {
+                speedValueEl.textContent = parseFloat(value).toFixed(2) + 'x';
+            }
+        }
+        
+        // Quick Create Functions
+        function openQuickCreateModal() {
+            const modal = document.getElementById('quickCreateModal');
+            modal.classList.add('active');
+            // Reset form
+            document.getElementById('quickCreateTenantId').value = '';
+            document.getElementById('quickCreateTextAgentId').value = '';
+            document.getElementById('quickCreateResult').style.display = 'none';
+            document.getElementById('quickCreateError').style.display = 'none';
+            document.getElementById('quickCreateLoading').style.display = 'none';
+        }
+        
+        function closeQuickCreateModal() {
+            const modal = document.getElementById('quickCreateModal');
+            modal.classList.remove('active');
+        }
+        
+        async function executeQuickCreate() {
+            const tenantId = document.getElementById('quickCreateTenantId').value.trim();
+            const textAgentId = document.getElementById('quickCreateTextAgentId').value.trim();
+            
+            if (!tenantId) {
+                alert('Please enter Tenant ID');
+                return;
+            }
+            
+            if (!textAgentId) {
+                alert('Please enter Text Agent ID');
+                return;
+            }
+            
+            // Hide previous results
+            document.getElementById('quickCreateResult').style.display = 'none';
+            document.getElementById('quickCreateError').style.display = 'none';
+            
+            // Show loading
+            document.getElementById('quickCreateLoading').style.display = 'block';
+            const createBtn = document.getElementById('executeQuickCreateBtn');
+            const originalText = createBtn.innerHTML;
+            createBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/agents/quick-create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tenant_id: tenantId,
+                        text_agent_id: textAgentId
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(errorData || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Display success result
+                const resultContent = document.getElementById('quickCreateResultContent');
+                resultContent.innerHTML = `
+                    <div style="background: #f9fff9; padding: 16px; border-radius: 8px; border: 2px solid #4CAF50; margin-top: 12px;">
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 12px; font-size: 14px;">
+                            <div><strong>Agent ID:</strong></div>
+                            <div style="font-family: monospace; word-break: break-all;">${data.id}</div>
+                            
+                            <div><strong>Agent Name:</strong></div>
+                            <div>${escapeHtml(data.agent_name)}</div>
+                            
+                            <div><strong>Tenant ID:</strong></div>
+                            <div>${escapeHtml(data.voice_tenant_id)}</div>
+                            
+                            <div><strong>Status:</strong></div>
+                            <div><span style="color: ${data.disabled ? '#f44336' : '#4CAF50'}; font-weight: bold;">${data.disabled ? 'Disabled' : 'Enabled'}</span></div>
+                            
+                            <div><strong>Voice:</strong></div>
+                            <div>${data.agent_config?.voice || 'N/A'}</div>
+                            
+                            <div><strong>Language:</strong></div>
+                            <div>${data.agent_config?.language || 'N/A'}</div>
+                            
+                            <div><strong>RAG Enabled:</strong></div>
+                            <div><span style="color: ${data.agent_config?.rag_config?.enabled ? '#4CAF50' : '#999'}; font-weight: bold;">${data.agent_config?.rag_config?.enabled ? '✓ Yes' : '✗ No'}</span></div>
+                            
+                            <div><strong>Created At:</strong></div>
+                            <div>${new Date(data.created_at).toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; text-align: center;">
+                        <button class="btn btn-primary" onclick="closeQuickCreateModal(); window.location.reload();">
+                            <span class="btn-icon">🔄</span> Refresh to view new Agent
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('quickCreateResult').style.display = 'block';
+                
+                // Auto reload after 3 seconds
+                setTimeout(() => {
+                    closeQuickCreateModal();
+                    window.location.reload();
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Failed to quick create agent:', error);
+                document.getElementById('quickCreateError').style.display = 'block';
+                document.getElementById('quickCreateErrorMessage').textContent = error.message;
+            } finally {
+                document.getElementById('quickCreateLoading').style.display = 'none';
+                createBtn.disabled = false;
+                createBtn.innerHTML = originalText;
+            }
+        }
+        
+        // AI Prompt Generator Functions
+        let generatedPrompts = {};
+        
+        function openAIGeneratorModal() {
+            const modal = document.getElementById('aiGeneratorModal');
+            modal.classList.add('active');
+            // Reset form
+            document.getElementById('aiGeneratorInput').value = '';
+            document.getElementById('generateGreeting').checked = true;
+            document.getElementById('generateRealtime').checked = true;
+            document.getElementById('generateSystemInstructions').checked = true;
+            document.getElementById('aiGeneratorResult').style.display = 'none';
+            document.getElementById('aiGeneratorError').style.display = 'none';
+            document.getElementById('applyGeneratedPromptBtn').style.display = 'none';
+            generatedPrompts = {};
+        }
+        
+        function closeAIGeneratorModal() {
+            const modal = document.getElementById('aiGeneratorModal');
+            modal.classList.remove('active');
+        }
+        
+        function toggleTemplateSelection() {
+            const isFullConfig = document.getElementById('generateFullConfig').checked;
+            const templateSelection = document.getElementById('templateSelection');
+            const generateBtn = document.getElementById('generatePromptBtn');
+            
+            templateSelection.style.display = isFullConfig ? 'none' : 'block';
+            
+            // Update button text based on mode
+            if (isFullConfig) {
+                generateBtn.innerHTML = '<span class="btn-icon">✨</span> Generate Full Configuration';
+            } else {
+                generateBtn.innerHTML = '<span class="btn-icon">🤖</span> Generate Prompts';
+            }
+        }
+        
+        async function generatePromptWithAI() {
+            const input = document.getElementById('aiGeneratorInput').value.trim();
+            if (!input) {
+                alert('Please enter Agent description');
+                return;
+            }
+            
+            const isFullConfig = document.getElementById('generateFullConfig').checked;
+            
+            // Check validation based on mode
+            if (!isFullConfig) {
+                const generateGreeting = document.getElementById('generateGreeting').checked;
+                const generateRealtime = document.getElementById('generateRealtime').checked;
+                const generateSystemInstructions = document.getElementById('generateSystemInstructions').checked;
+                
+                if (!generateGreeting && !generateRealtime && !generateSystemInstructions) {
+                    alert('Please select at least one template to generate');
+                    return;
+                }
+            }
+            
+            // Hide previous results
+            document.getElementById('aiGeneratorResult').style.display = 'none';
+            document.getElementById('aiGeneratorError').style.display = 'none';
+            document.getElementById('applyGeneratedPromptBtn').style.display = 'none';
+            
+            // Show loading
+            const generateBtn = document.getElementById('generatePromptBtn');
+            const originalText = generateBtn.innerHTML;
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating...';
+            
+            try {
+                let requestBody;
+                
+                if (isFullConfig) {
+                    // Generate full config mode
+                    requestBody = {
+                        description: input,
+                        generate_full_config: true
+                    };
+                } else {
+                    // Generate prompts only mode
+                    const agentContext = {
+                        agent_name: document.getElementById('agentName')?.value || '',
+                        persona: document.getElementById('persona')?.value || '',
+                        tone: document.getElementById('tone')?.value || '',
+                        language: document.getElementById('language')?.value || 'en',
+                        voice: document.getElementById('voice')?.value || '',
+                        services: document.getElementById('services')?.value || '',
+                        expertise: document.getElementById('expertise')?.value || '',
+                        business_number: document.getElementById('businessNumber')?.value || ''
+                    };
+                    
+                    const generateGreeting = document.getElementById('generateGreeting').checked;
+                    const generateRealtime = document.getElementById('generateRealtime').checked;
+                    const generateSystemInstructions = document.getElementById('generateSystemInstructions').checked;
+                    
+                    requestBody = {
+                        description: input,
+                        agent_context: agentContext,
+                        generate_full_config: false,
+                        templates: {
+                            greeting: generateGreeting,
+                            realtime: generateRealtime,
+                            system_instructions: generateSystemInstructions
+                        }
+                    };
+                }
+                
+                const response = await fetch('/api/agents/generate-prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (isFullConfig && data.full_config) {
+                    // Store full config for applying later
+                    generatedPrompts = data.full_config;
+                    // Display full config
+                    displayGeneratedFullConfig(data.full_config);
+                } else if (data.prompts) {
+                    // Store prompts for applying later
+                    generatedPrompts = data.prompts;
+                    // Display prompts
+                    displayGeneratedPrompts(data.prompts);
+                }
+                
+                document.getElementById('aiGeneratorResult').style.display = 'block';
+                document.getElementById('applyGeneratedPromptBtn').style.display = 'inline-block';
+                
+            } catch (error) {
+                console.error('Failed to generate prompts:', error);
+                document.getElementById('aiGeneratorError').style.display = 'block';
+                document.getElementById('aiGeneratorErrorMessage').textContent = error.message;
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = originalText;
+            }
+        }
+        
+        function displayGeneratedFullConfig(config) {
+            const resultContent = document.getElementById('aiGeneratorResultContent');
+            resultContent.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #4CAF50;">🎯 Complete Configuration</h4>
+                    <div style="background: #f9fff9; padding: 16px; border-radius: 8px; border: 2px solid #4CAF50;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
+                            ${config.persona ? `<div><strong>Persona:</strong> ${escapeHtml(config.persona)}</div>` : ''}
+                            ${config.tone ? `<div><strong>Tone:</strong> ${escapeHtml(config.tone)}</div>` : ''}
+                            ${config.language ? `<div><strong>Language:</strong> ${escapeHtml(config.language)}</div>` : ''}
+                            ${config.voice ? `<div><strong>Voice:</strong> ${escapeHtml(config.voice)}</div>` : ''}
+                            ${config.speed ? `<div><strong>Speed:</strong> ${config.speed}x</div>` : ''}
+                            ${config.services && config.services.length > 0 ? `<div style="grid-column: 1 / -1;"><strong>Services:</strong> ${config.services.join(', ')}</div>` : ''}
+                            ${config.expertise && config.expertise.length > 0 ? `<div style="grid-column: 1 / -1;"><strong>Expertise:</strong> ${config.expertise.join(', ')}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                ${config.greeting_template ? `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #4CAF50;">✅ Greeting Template</h4>
+                    <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-size: 13px;">${escapeHtml(config.greeting_template)}</pre>
+                </div>
+                ` : ''}
+                
+                ${config.realtime_template ? `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #4CAF50;">✅ Realtime Template</h4>
+                    <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-size: 13px;">${escapeHtml(config.realtime_template)}</pre>
+                </div>
+                ` : ''}
+                
+                ${config.system_instructions ? `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #4CAF50;">✅ System Instructions</h4>
+                    <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-size: 13px;">${escapeHtml(config.system_instructions)}</pre>
+                </div>
+                ` : ''}
+            `;
+        }
+        
+        function displayGeneratedPrompts(prompts) {
+            const resultContent = document.getElementById('aiGeneratorResultContent');
+            resultContent.innerHTML = '';
+            
+            if (prompts.greeting_template) {
+                resultContent.innerHTML += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #4CAF50;">✅ Greeting Template</h4>
+                        <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-size: 13px;">${escapeHtml(prompts.greeting_template)}</pre>
+                    </div>
+                `;
+            }
+            
+            if (prompts.realtime_template) {
+                resultContent.innerHTML += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #4CAF50;">✅ Realtime Template</h4>
+                        <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-size: 13px;">${escapeHtml(prompts.realtime_template)}</pre>
+                    </div>
+                `;
+            }
+            
+            if (prompts.system_instructions) {
+                resultContent.innerHTML += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #4CAF50;">✅ System Instructions</h4>
+                        <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-size: 13px;">${escapeHtml(prompts.system_instructions)}</pre>
+                    </div>
+                `;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function applyGeneratedPrompt() {
+            const isFullConfig = document.getElementById('generateFullConfig').checked;
+            
+            if (isFullConfig) {
+                // Apply full configuration
+                if (generatedPrompts.persona) {
+                    document.getElementById('persona').value = generatedPrompts.persona;
+                }
+                if (generatedPrompts.tone) {
+                    const toneSelect = document.getElementById('toneSelect');
+                    const toneInput = document.getElementById('tone');
+                    // Try to find matching option
+                    const options = Array.from(toneSelect.options);
+                    const matchingOption = options.find(opt => opt.value.toLowerCase() === generatedPrompts.tone.toLowerCase());
+                    if (matchingOption) {
+                        toneSelect.value = matchingOption.value;
+                        toneInput.value = matchingOption.value;
+                        toneInput.style.display = 'none';
+                    } else {
+                        toneSelect.value = '__custom__';
+                        toneInput.value = generatedPrompts.tone;
+                        toneInput.style.display = 'block';
+                    }
+                }
+                if (generatedPrompts.language) {
+                    document.getElementById('language').value = generatedPrompts.language;
+                }
+                if (generatedPrompts.voice) {
+                    document.getElementById('voice').value = generatedPrompts.voice;
+                }
+                if (generatedPrompts.speed) {
+                    const speedInput = document.getElementById('speed');
+                    speedInput.value = generatedPrompts.speed;
+                    updateSpeedDisplay(generatedPrompts.speed);
+                }
+                if (generatedPrompts.services && generatedPrompts.services.length > 0) {
+                    document.getElementById('services').value = generatedPrompts.services.join(', ');
+                }
+                if (generatedPrompts.expertise && generatedPrompts.expertise.length > 0) {
+                    document.getElementById('expertise').value = generatedPrompts.expertise.join(', ');
+                }
+                if (generatedPrompts.greeting_template) {
+                    document.getElementById('greetingTemplate').value = decodeTextNewlines(generatedPrompts.greeting_template);
+                }
+                if (generatedPrompts.realtime_template) {
+                    document.getElementById('realtimeTemplate').value = decodeTextNewlines(generatedPrompts.realtime_template);
+                }
+                if (generatedPrompts.system_instructions) {
+                    document.getElementById('systemInstructions').value = decodeTextNewlines(generatedPrompts.system_instructions);
+                }
+                
+                closeAIGeneratorModal();
+                alert('✅ Full configuration applied to form');
+            } else {
+                // Apply prompts only
+                if (generatedPrompts.greeting_template) {
+                    document.getElementById('greetingTemplate').value = decodeTextNewlines(generatedPrompts.greeting_template);
+                }
+                if (generatedPrompts.realtime_template) {
+                    document.getElementById('realtimeTemplate').value = decodeTextNewlines(generatedPrompts.realtime_template);
+                }
+                if (generatedPrompts.system_instructions) {
+                    document.getElementById('systemInstructions').value = decodeTextNewlines(generatedPrompts.system_instructions);
+                }
+                
+                closeAIGeneratorModal();
+                alert('✅ Generated prompts applied to form');
+            }
+        }
+        
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const selectedTab = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+            if (selectedTab) {
+                selectedTab.style.display = 'block';
+                selectedTab.classList.add('active');
+            }
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Sync JSON when switching to JSON tab
+            if (tabName === 'json') {
+                syncFormToJson();
+            }
+            // Sync form when switching away from JSON tab
+            else if (currentTab === 'json') {
+                syncJsonToForm();
+            }
+            
+            currentTab = tabName;
+        }
+        
+        let currentTab = 'basic';
+        
+        // Sync form fields to JSON editor
+        function syncFormToJson() {
+            const speedValue = parseFloat(document.getElementById('speed')?.value);
+            const agentConfig = {
+                business_number: document.getElementById('businessNumber')?.value || '',
+                persona: document.getElementById('persona')?.value || '',
+                services: document.getElementById('services')?.value.split(',').map(s => s.trim()).filter(s => s),
+                tone: document.getElementById('tone')?.value || '',
+                language: document.getElementById('language')?.value || 'en',
+                voice: document.getElementById('voice')?.value || '',
+                speed: isNaN(speedValue) ? 1.0 : speedValue,
+                expertise: document.getElementById('expertise')?.value.split(',').map(s => s.trim()).filter(s => s),
+                prompt_config: {
+                    greeting_template: document.getElementById('greetingTemplate')?.value || '',
+                    realtime_template: document.getElementById('realtimeTemplate')?.value || '',
+                    system_instructions: document.getElementById('systemInstructions')?.value || ''
+                },
+                rag_config: {
+                    enabled: document.getElementById('ragEnabled')?.checked || false,
+                    base_url: document.getElementById('ragBaseUrl')?.value || '',
+                    token: document.getElementById('ragToken')?.value || ''
+                }
+            };
+            
+            // Add PromptConfig extended fields
+            const conversationFlow = document.getElementById('conversationFlow')?.value;
+            const exampleDialogues = document.getElementById('exampleDialogues')?.value;
+            const languageInstructions = document.getElementById('languageInstructions')?.value;
+            const customVariables = document.getElementById('customVariables')?.value;
+            
+            if (conversationFlow) {
+                agentConfig.prompt_config.conversation_flow = conversationFlow.split(',').map(s => s.trim()).filter(s => s);
+            }
+            try {
+                if (exampleDialogues) agentConfig.prompt_config.example_dialogues = JSON.parse(exampleDialogues);
+                if (languageInstructions) agentConfig.prompt_config.language_instructions = JSON.parse(languageInstructions);
+                if (customVariables) agentConfig.prompt_config.custom_variables = JSON.parse(customVariables);
+            } catch (e) {
+                console.warn('Invalid JSON in PromptConfig extended fields:', e);
+            }
+            
+            // Add language & accent adaptation settings
+            const autoLanguageSwitching = document.getElementById('autoLanguageSwitching')?.checked;
+            const autoAccentAdaptation = document.getElementById('autoAccentAdaptation')?.checked;
+            
+            // Only set these fields if explicitly unchecked (default is true, so we only need to store false)
+            if (autoLanguageSwitching !== undefined) {
+                agentConfig.prompt_config.auto_language_switching = autoLanguageSwitching;
+            }
+            if (autoAccentAdaptation !== undefined) {
+                agentConfig.prompt_config.auto_accent_adaptation = autoAccentAdaptation;
+            }
+            
+            // Add RAGConfig extended fields
+            const ragWorkflowId = document.getElementById('ragWorkflowId')?.value;
+            const ragDescription = document.getElementById('ragDescription')?.value;
+            const ragHeaders = document.getElementById('ragHeaders')?.value;
+            const ragTimeout = document.getElementById('ragTimeout')?.value;
+            const ragMaxRetries = document.getElementById('ragMaxRetries')?.value;
+            
+            if (ragWorkflowId) agentConfig.rag_config.workflow_id = ragWorkflowId;
+            if (ragDescription) agentConfig.rag_config.description = ragDescription;
+            if (ragTimeout) agentConfig.rag_config.timeout = parseInt(ragTimeout);
+            if (ragMaxRetries) agentConfig.rag_config.max_retries = parseInt(ragMaxRetries);
+            try {
+                if (ragHeaders) agentConfig.rag_config.headers = JSON.parse(ragHeaders);
+            } catch (e) {
+                console.warn('Invalid JSON in RAG Headers:', e);
+            }
+            
+            // Add API Config
+            const apiEndpoints = document.getElementById('apiEndpoints')?.value;
+            const apiTokens = document.getElementById('apiTokens')?.value;
+            const apiHeaders = document.getElementById('apiHeaders')?.value;
+            if (apiEndpoints || apiTokens || apiHeaders) {
+                agentConfig.api_config = {};
+                try {
+                    if (apiEndpoints) agentConfig.api_config.endpoints = JSON.parse(apiEndpoints);
+                    if (apiTokens) agentConfig.api_config.tokens = JSON.parse(apiTokens);
+                    if (apiHeaders) agentConfig.api_config.headers = JSON.parse(apiHeaders);
+                } catch (e) {
+                    console.warn('Invalid JSON in API Config:', e);
+                }
+            }
+            
+            // Add Business Rules
+            const allowedActions = document.getElementById('allowedActions')?.value;
+            const requiredFields = document.getElementById('requiredFields')?.value;
+            const validationRules = document.getElementById('validationRules')?.value;
+            const maxConversationTime = document.getElementById('maxConversationTime')?.value;
+            const workingHoursTimezone = document.getElementById('workingHoursTimezone')?.value;
+            const workingHoursSchedule = document.getElementById('workingHoursSchedule')?.value;
+            const escalationRules = document.getElementById('escalationRules')?.value;
+            
+            const functionCallRules = document.getElementById('functionCallRules')?.value;
+            
+            if (allowedActions || requiredFields || validationRules || maxConversationTime || workingHoursTimezone || workingHoursSchedule || escalationRules || functionCallRules) {
+                agentConfig.business_rules = {};
+                if (allowedActions) agentConfig.business_rules.allowed_actions = allowedActions.split(',').map(s => s.trim()).filter(s => s);
+                if (requiredFields) agentConfig.business_rules.required_fields = requiredFields.split(',').map(s => s.trim()).filter(s => s);
+                if (maxConversationTime) agentConfig.business_rules.max_conversation_time = parseInt(maxConversationTime);
+                
+                try {
+                    if (validationRules) agentConfig.business_rules.validation_rules = JSON.parse(validationRules);
+                    if (escalationRules) agentConfig.business_rules.escalation_rules = JSON.parse(escalationRules);
+                    if (functionCallRules) agentConfig.business_rules.function_call_rules = JSON.parse(functionCallRules);
+                } catch (e) {
+                    console.warn('Invalid JSON in Business Rules:', e);
+                }
+                
+                if (workingHoursTimezone || workingHoursSchedule) {
+                    agentConfig.business_rules.working_hours = {};
+                    if (workingHoursTimezone) agentConfig.business_rules.working_hours.timezone = workingHoursTimezone;
+                    try {
+                        if (workingHoursSchedule) agentConfig.business_rules.working_hours.schedule = JSON.parse(workingHoursSchedule);
+                    } catch (e) {
+                        console.warn('Invalid JSON in Working Hours Schedule:', e);
+                    }
+                }
+            }
+            
+            document.getElementById('agentConfigJson').value = JSON.stringify(agentConfig, null, 2);
+        }
+        
+        // Sync JSON editor to form fields
+        function syncJsonToForm() {
+            try {
+                const config = JSON.parse(document.getElementById('agentConfigJson').value);
+                
+                if (config.business_number) document.getElementById('businessNumber').value = config.business_number;
+                if (config.persona) document.getElementById('persona').value = config.persona;
+                if (config.services) document.getElementById('services').value = config.services.join(', ');
+                
+                // Handle tone field
+                if (config.tone) {
+                    const toneValue = config.tone;
+                    const presetTones = ['friendly', 'professional', 'casual', 'enthusiastic', 'empathetic', 'warm', 'formal', 'conversational'];
+                    const toneSelect = document.getElementById('toneSelect');
+                    const toneInput = document.getElementById('tone');
+                    const toneHelp = document.getElementById('toneHelp');
+                    
+                    if (presetTones.includes(toneValue)) {
+                        toneSelect.value = toneValue;
+                        toneInput.value = toneValue;
+                        toneInput.style.display = 'none';
+                        if (toneHelp) toneHelp.style.display = 'none';
+                    } else {
+                        toneSelect.value = '__custom__';
+                        toneInput.value = toneValue;
+                        toneInput.style.display = 'block';
+                        if (toneHelp) toneHelp.style.display = 'block';
+                    }
+                }
+                
+                if (config.language) document.getElementById('language').value = config.language;
+                if (config.voice) document.getElementById('voice').value = config.voice;
+                if (config.speed !== undefined) {
+                    document.getElementById('speed').value = config.speed;
+                    updateSpeedDisplay(config.speed); // Update the display value
+                }
+                if (config.expertise) document.getElementById('expertise').value = config.expertise.join(', ');
+                
+                if (config.prompt_config) {
+                    if (config.prompt_config.greeting_template) 
+                        document.getElementById('greetingTemplate').value = decodeTextNewlines(config.prompt_config.greeting_template);
+                    if (config.prompt_config.realtime_template) 
+                        document.getElementById('realtimeTemplate').value = decodeTextNewlines(config.prompt_config.realtime_template);
+                    if (config.prompt_config.system_instructions) 
+                        document.getElementById('systemInstructions').value = decodeTextNewlines(config.prompt_config.system_instructions);
+                    if (config.prompt_config.conversation_flow)
+                        document.getElementById('conversationFlow').value = config.prompt_config.conversation_flow.join(', ');
+                    if (config.prompt_config.example_dialogues)
+                        document.getElementById('exampleDialogues').value = JSON.stringify(config.prompt_config.example_dialogues, null, 2);
+                    if (config.prompt_config.language_instructions)
+                        document.getElementById('languageInstructions').value = JSON.stringify(config.prompt_config.language_instructions, null, 2);
+                    if (config.prompt_config.custom_variables)
+                        document.getElementById('customVariables').value = JSON.stringify(config.prompt_config.custom_variables, null, 2);
+                    
+                    // Load language & accent adaptation settings (default: true if not specified)
+                    const autoLangSwitching = config.prompt_config.auto_language_switching !== undefined 
+                        ? config.prompt_config.auto_language_switching 
+                        : true;
+                    const autoAccent = config.prompt_config.auto_accent_adaptation !== undefined 
+                        ? config.prompt_config.auto_accent_adaptation 
+                        : true;
+                    document.getElementById('autoLanguageSwitching').checked = autoLangSwitching;
+                    document.getElementById('autoAccentAdaptation').checked = autoAccent;
+                }
+                
+                if (config.rag_config) {
+                    document.getElementById('ragEnabled').checked = config.rag_config.enabled || false;
+                    if (config.rag_config.base_url) 
+                        document.getElementById('ragBaseUrl').value = config.rag_config.base_url;
+                    if (config.rag_config.token) 
+                        document.getElementById('ragToken').value = config.rag_config.token;
+                    if (config.rag_config.workflow_id)
+                        document.getElementById('ragWorkflowId').value = config.rag_config.workflow_id;
+                    if (config.rag_config.description)
+                        document.getElementById('ragDescription').value = config.rag_config.description;
+                    if (config.rag_config.headers)
+                        document.getElementById('ragHeaders').value = JSON.stringify(config.rag_config.headers, null, 2);
+                    if (config.rag_config.timeout)
+                        document.getElementById('ragTimeout').value = config.rag_config.timeout;
+                    if (config.rag_config.max_retries !== undefined)
+                        document.getElementById('ragMaxRetries').value = config.rag_config.max_retries;
+                }
+                
+                // Load API Config
+                if (config.api_config) {
+                    if (config.api_config.endpoints)
+                        document.getElementById('apiEndpoints').value = JSON.stringify(config.api_config.endpoints, null, 2);
+                    if (config.api_config.tokens)
+                        document.getElementById('apiTokens').value = JSON.stringify(config.api_config.tokens, null, 2);
+                    if (config.api_config.headers)
+                        document.getElementById('apiHeaders').value = JSON.stringify(config.api_config.headers, null, 2);
+                }
+                
+                // Load Business Rules
+                if (config.business_rules) {
+                    if (config.business_rules.allowed_actions)
+                        document.getElementById('allowedActions').value = config.business_rules.allowed_actions.join(', ');
+                    if (config.business_rules.required_fields)
+                        document.getElementById('requiredFields').value = config.business_rules.required_fields.join(', ');
+                    if (config.business_rules.validation_rules)
+                        document.getElementById('validationRules').value = JSON.stringify(config.business_rules.validation_rules, null, 2);
+                    if (config.business_rules.max_conversation_time)
+                        document.getElementById('maxConversationTime').value = config.business_rules.max_conversation_time;
+                    
+                    if (config.business_rules.working_hours) {
+                        if (config.business_rules.working_hours.timezone)
+                            document.getElementById('workingHoursTimezone').value = config.business_rules.working_hours.timezone;
+                        if (config.business_rules.working_hours.schedule)
+                            document.getElementById('workingHoursSchedule').value = JSON.stringify(config.business_rules.working_hours.schedule, null, 2);
+                    }
+                    
+                    if (config.business_rules.escalation_rules)
+                        document.getElementById('escalationRules').value = JSON.stringify(config.business_rules.escalation_rules, null, 2);
+                    if (config.business_rules.function_call_rules)
+                        document.getElementById('functionCallRules').value = JSON.stringify(config.business_rules.function_call_rules, null, 2);
+                }
+            } catch (error) {
+                console.error('Failed to sync JSON to form:', error);
+            }
+        }
+        
+        // Validate JSON
+        function validateJson() {
+            const jsonEditor = document.getElementById('agentConfigJson');
+            const validationDiv = document.getElementById('jsonValidation');
+            
+            try {
+                const parsed = JSON.parse(jsonEditor.value);
+                validationDiv.innerHTML = '<div style="color: green; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">✓ Valid JSON</div>';
+                return true;
+            } catch (error) {
+                validationDiv.innerHTML = `<div style="color: #721c24; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">✗ Invalid JSON: ${error.message}</div>`;
+                return false;
+            }
+        }
+        
+        // Format JSON
+        function formatJson() {
+            const jsonEditor = document.getElementById('agentConfigJson');
+            try {
+                const parsed = JSON.parse(jsonEditor.value);
+                jsonEditor.value = JSON.stringify(parsed, null, 2);
+                validateJson();
+            } catch (error) {
+                alert('Cannot format invalid JSON. Please fix errors first.');
+            }
+        }
+        
+        // Load default agent config template
+        function loadDefaultConfig() {
+            const defaultConfig = {
+                business_number: "",
+                persona: "friendly, professional agent",
+                services: ["Service 1", "Service 2"],
+                tone: "friendly",
+                language: "en",
+                expertise: ["Expertise 1", "Expertise 2"],
+                prompt_config: {
+                    greeting_template: "",
+                    realtime_template: "You are a helpful assistant...",
+                    system_instructions: "",
+                    conversation_flow: [],
+                    example_dialogues: {}
+                },
+                rag_config: {
+                    enabled: false,
+                    base_url: "",
+                    token: "",
+                    description: "",
+                    timeout: 30,
+                    max_retries: 3
+                },
+                api_config: {
+                    endpoints: {},
+                    tokens: {},
+                    headers: {}
+                },
+                business_rules: {
+                    allowed_actions: [
+                        "send_sales_summary"
+                    ],
+                    required_fields: [],
+                    max_conversation_time: 30,
+                    working_hours: {
+                        "timezone": "Asia/Singapore",
+                        "schedule": {
+                            "monday": "09:00-18:00",
+                            "tuesday": "09:00-18:00",
+                            "wednesday": "09:00-18:00",
+                            "thursday": "09:00-18:00",
+                            "friday": "09:00-18:00"
+                        }
+                    },
+                    function_call_rules: {
+                        "send_sales_summary": {
+                            "description": "Send the final sales summary and sales proposal to the customer via WhatsApp. Call only when the proposal is ready.",
+                            "when": "user agrees to proposal or sales discussion is complete and ready to send summary",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "whatsappNumber": {
+                                        "type": "string",
+                                        "description": "User's WhatsApp number with country code (digits only preferred)"
+                                    },
+                                    "meetingTime": {
+                                        "type": "string",
+                                        "description": "Meeting time in ISO 8601 format only (e.g., '2025-09-22T07:00:00Z'). Do not accept natural language time expressions."
+                                    }
+                                },
+                                "required": ["whatsappNumber", "meetingTime"]
+                            }
+                        }
+                    }
+                }
+            };
+            
+            document.getElementById('agentConfigJson').value = JSON.stringify(defaultConfig, null, 2);
+            validateJson();
+        }
+        
+        // Auto-validate JSON on input
+        document.getElementById('agentConfigJson')?.addEventListener('input', function() {
+            clearTimeout(window.jsonValidationTimeout);
+            window.jsonValidationTimeout = setTimeout(validateJson, 500);
+        });
+    </script>
+    
+    <style>
+        /* Tab navigation styles */
+        .tab-navigation {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+            gap: 5px;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tab-content h3 {
+            margin: 20px 0 15px 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .tab-content h3:first-child {
+            margin-top: 0;
+        }
+        
+        .json-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .json-actions .btn {
+            flex: 1;
+        }
+        
+        .json-validation {
+            font-size: 13px;
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Management - WhatsApp Call</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tenant_management.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Tenant Management</h1>
+            <p>Manage voice tenants and their configurations</p>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="addTenantBtn">
+                    <span class="btn-icon">➕</span>
+                    Add New Tenant
+                </button>
+                <button class="btn btn-secondary" id="refreshBtn">
+                    <span class="btn-icon">🔄</span>
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="filters-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search tenants by name, ID, or Astra key...">
+                <span class="search-icon">🔍</span>
+            </div>
+            <div class="filter-controls">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="includeDisabledFilter">
+                    <span class="checkmark"></span>
+                    Include Disabled
+                </label>
+                <select id="sortSelect">
+                    <option value="name">Sort by Name</option>
+                    <option value="created_at">Sort by Created Date</option>
+                    <option value="updated_at">Sort by Updated Date</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🏢</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="totalTenants">0</div>
+                    <div class="stat-label">Total Tenants</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="activeTenants">0</div>
+                    <div class="stat-label">Active Tenants</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">❌</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="disabledTenants">0</div>
+                    <div class="stat-label">Disabled Tenants</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🤖</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="totalAgents">0</div>
+                    <div class="stat-label">Total Agents</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tenants Table -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>📋 Tenants List</h3>
+                <div class="table-actions">
+                    <button class="btn btn-outline" id="exportBtn">
+                        <span class="btn-icon">📥</span>
+                        Export
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="tenantsTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Tenant ID</th>
+                            <th>Astra Key</th>
+                            <th>Status</th>
+                            <th>Agents</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tenantsTableBody">
+                        <!-- Dynamic content will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="loading-state" id="loadingState">
+                <div class="spinner"></div>
+                <p>Loading tenants...</p>
+            </div>
+            
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">🏢</div>
+                <h3>No Tenants Found</h3>
+                <p>Get started by creating your first tenant</p>
+                <button class="btn btn-primary" onclick="openTenantModal()">
+                    <span class="btn-icon">➕</span>
+                    Create First Tenant
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tenant Modal -->
+    <div class="modal-overlay" id="tenantModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Tenant</h2>
+                <button class="modal-close" onclick="closeTenantModal()">✕</button>
+            </div>
+            
+            <form id="tenantForm" class="modal-body">
+                <input type="hidden" id="tenantId" name="id">
+                
+                <div class="form-group">
+                    <label for="tenantName">Tenant Name *</label>
+                    <input type="text" id="tenantName" name="name" required 
+                           placeholder="Enter tenant name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="tenantIdInput">Tenant ID *</label>
+                    <input type="text" id="tenantIdInput" name="tenant_id" required 
+                           placeholder="Enter unique tenant ID">
+                    <small class="form-help">Must be unique across all tenants</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="astraKey">Astra Key *</label>
+                    <input type="text" id="astraKey" name="astra_key" required 
+                           placeholder="Enter Astra API key">
+                    <small class="form-help">Used for Astra integration</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="3" 
+                              placeholder="Optional description for this tenant"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isEnabled" name="is_enabled" checked>
+                        <span class="checkmark"></span>
+                        Enable Tenant
+                    </label>
+                    <small class="form-help">Disabled tenants cannot be used for voice calls</small>
+                </div>
+            </form>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeTenantModal()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" id="saveTenantBtn" form="tenantForm">
+                    <span class="btn-icon">💾</span>
+                    Save Tenant
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2>🗑️ Delete Tenant</h2>
+                <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <p>Are you sure you want to delete this tenant?</p>
+                <div class="delete-warning">
+                    <strong id="deleteTenantName"></strong>
+                    <br>
+                    <small>This action cannot be undone. All associated agents will also be affected.</small>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <span class="btn-icon">🗑️</span>
+                    Delete Tenant
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- API Client with Key Validation -->
+    <script src="/static/js/api_client.js"></script>
+    <script src="/static/js/tenant_management.js"></script>
+</body>
+</html>

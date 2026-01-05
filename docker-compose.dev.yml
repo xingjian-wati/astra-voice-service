@@ -1,0 +1,62 @@
+# ==========================================
+# Docker Compose for Local Development
+# ==========================================
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  # Main PostgreSQL database for local development
+  # Stores: voice_tenants, voice_agents_config, voice_conversations, voice_messages
+  postgres:
+    image: postgres:15-alpine
+    container_name: astra-voice-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: voice_gateway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - voice_postgres_data:/var/lib/postgresql/data
+      # Auto-initialize database schema (optional)
+      - ./scripts/init-db-updated.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d voice_gateway"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - voice-network
+
+  # WhatsApp Voice Service (optional, for full Docker development)
+  whatsapp-voice:
+    build:
+      context: .
+      dockerfile: Dockerfile.whatsapp-call
+      args:
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+    container_name: whatsapp-voice-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - voice-network
+    volumes:
+      - .:/app
+
+volumes:
+  voice_postgres_data:
+    driver: local
+
+networks:
+  voice-network:
+    driver: bridge

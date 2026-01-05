@@ -1,0 +1,144 @@
+replicaCount: 1
+
+image:
+  repository: livekit/livekit-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+enablePodMonitor: false
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+service:
+  # HTTP/WebSocket 服务 - 用于信令和 API
+  http:
+    name: livekit-server
+    type: ClusterIP
+    port: 7880
+  
+  # RTC UDP 服务 - 用于媒体流传输
+  # 注意：UDP 端口需要通过 NodePort 或 LoadBalancer 暴露给外部客户端
+  rtc:
+    enabled: true
+    type: NodePort  # 生产环境可改为 LoadBalancer
+    ports:
+      - name: rtc-udp-1
+        port: 7881
+        targetPort: 7881
+        protocol: UDP
+        # nodePort: 30881  # 可选：固定 NodePort（30000-32767）
+      - name: rtc-udp-2
+        port: 7882
+        targetPort: 7882
+        protocol: UDP
+        # nodePort: 30882  # 可选：固定 NodePort
+
+secret:
+  name: "livekit-server"
+  data:
+    # API Keys - 存储在 Secret 中
+    LIVEKIT_KEYS: "devkey: secret1234567890abcdefghijklmnopqrstuvwxyz"
+
+configMap:
+  data:
+    env:
+      # ===== LiveKit Server 基础配置 =====
+      LIVEKIT_PORT: '7880'
+      LIVEKIT_LOG_LEVEL: 'info'  # debug, info, warn, error
+      
+      # ===== 低延迟优化配置 (关键!) =====
+      # RTC 缓冲区大小 - 减小以降低延迟
+      LIVEKIT_RTC_BUFFER_SIZE: '50'
+      
+      # PLI (Picture Loss Indication) 节流 - 控制重传请求频率
+      LIVEKIT_RTC_PLI_THROTTLE: '100ms'
+      
+      # RTP 数据包缓冲区大小 - 减小以降低延迟
+      LIVEKIT_RTC_PACKET_BUFFER_SIZE: '50'
+      
+      # ===== 音频配置 =====
+      # Jitter buffer 配置 (最小化抖动缓冲)
+      LIVEKIT_RTC_AUDIO_MIN_JITTER: '0'
+      LIVEKIT_RTC_AUDIO_MAX_JITTER: '50'
+      
+      # ===== 其他优化配置 =====
+      # 关闭开发模式（生产环境）
+      # LIVEKIT_DEV_MODE: 'false'
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 70
+  external:
+    enabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # ===== WebSocket 支持 (必须!) =====
+    nginx.ingress.kubernetes.io/websocket-services: "livekit-server"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    
+    # ===== SSL 配置 =====
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    
+    # ===== 优化配置 =====
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+    
+    # ===== CORS 支持 (如果前端需要跨域) =====
+    # nginx.ingress.kubernetes.io/enable-cors: "true"
+    # nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+  
+  hosts:
+    - host: livekit.watiapp.io  # ⚠️ 修改为你的域名
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          serviceName: "livekit-server"
+          servicePort: 7880
+  tls: []
+
+# tolerations:
+# - key: "app"
+#   operator: "Equal"
+#   value: "astra"
+#   effect: "NoSchedule"
+
+# nodeSelector:
+#   app: astra
+

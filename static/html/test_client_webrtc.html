@@ -1,0 +1,3055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wati Webhook WebRTC Test Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .btn-danger { background: linear-gradient(135deg, #eb3941 0%, #f15e64 100%); }
+        .btn-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .btn-warning { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        button:active { transform: translateY(0px); }
+        
+        #pttBtn:active:not(:disabled) {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3) inset;
+        }
+
+        .status-box {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .status-box.success { background: #d4edda; border-color: #c3e6cb; }
+        .status-box.error { background: #f8d7da; border-color: #f5c6cb; }
+        .status-box.info { background: #d1ecf1; border-color: #bee5eb; }
+
+        .full-width { grid-column: 1 / -1; }
+
+        .connection-state {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .state-new { background: #e3f2fd; color: #1976d2; }
+        .state-connecting { background: #fff3e0; color: #f57c00; }
+        .state-connected { background: #e8f5e9; color: #388e3c; }
+        .state-failed { background: #ffebee; color: #c62828; }
+        .state-closed { background: #f5f5f5; color: #757575; }
+
+        .audio-controls {
+            margin: 15px 0;
+        }
+
+        .volume-meter {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .volume-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a, #ffeb3b, #ff9800, #f44336);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .rate-limit-info {
+            margin-top: 15px;
+        }
+
+        .rate-item {
+            margin-bottom: 15px;
+        }
+
+        .rate-item label {
+            display: block;
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .rate-bar-container {
+            width: 100%;
+            height: 24px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            position: relative;
+        }
+
+        .rate-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #66bb6a);
+            width: 0%;
+            transition: width 0.3s ease, background 0.3s ease;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .rate-bar.warning {
+            background: linear-gradient(90deg, #ff9800, #ffa726);
+        }
+
+        .rate-bar.danger {
+            background: linear-gradient(90deg, #f44336, #e57373);
+        }
+
+        .rate-text {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 3px;
+            font-family: monospace;
+        }
+
+        .rate-update-time {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            font-size: 0.85em;
+            color: #999;
+            text-align: center;
+        }
+
+        .conversation-box {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .conversation-box::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .conversation-box::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .conversation-box::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .conversation-box::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            animation: messageSlideIn 0.3s ease-out;
+            word-wrap: break-word;
+        }
+
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: 40px;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message-assistant {
+            background: white;
+            border: 1px solid #e0e0e0;
+            margin-right: 40px;
+            border-bottom-left-radius: 2px;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .message-user .message-header {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .message-assistant .message-header {
+            color: #667eea;
+        }
+
+        .message-icon {
+            margin-right: 6px;
+            font-size: 1.2em;
+        }
+
+        .message-time {
+            margin-left: auto;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .message-content {
+            line-height: 1.5;
+            font-size: 0.95em;
+        }
+
+        .message-user .message-content {
+            color: white;
+        }
+
+        .message-assistant .message-content {
+            color: #333;
+        }
+
+        .conversation-stats {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            font-size: 0.85em;
+            color: #666;
+            text-align: center;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; }
+            .message-user, .message-assistant {
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+
+        /* Language Switcher Styles */
+        .language-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            background: white;
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .lang-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .lang-btn:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .lang-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Language Switcher -->
+        <div class="language-switcher">
+            <button class="lang-btn" onclick="switchLanguage('zh')">🇨🇳 中文</button>
+            <button class="lang-btn active" onclick="switchLanguage('en')">🇺🇸 EN</button>
+        </div>
+
+        <div class="header">
+            <h1 data-i18n="title">🎙️ Wati Webhook WebRTC Test Client</h1>
+            <p data-i18n="subtitle">Complete call flow simulation with WebRTC audio transmission</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Configuration Section -->
+            <div class="card">
+                <h2 data-i18n="config">⚙️ Configuration</h2>
+                <div class="form-group">
+                    <label data-i18n="serverAddress">Server Address</label>
+                    <input type="text" id="serverUrl" value="">
+                </div>
+                
+                <!-- Test Mode Switch -->
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="testMode" checked style="width: auto; transform: scale(1.5);">
+                        <span data-i18n="testMode">🧪 Test Mode</span>
+                        <span id="testModeLabel" data-i18n="enabled" style="font-size: 0.9em; color: #667eea; font-weight: bold;">(Enabled)</span>
+                    </label>
+                    <div id="testModeDesc" data-i18n="testModeDesc" style="font-size: 0.85em; color: #666; margin-top: 5px; line-height: 1.4;">
+                        <strong>Test Mode</strong>: Skip tenant validation, no Wati API calls<br>
+                        <strong>Production Mode</strong>: Full validation with Wati API calls
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        Tenant ID <span id="tenantRequired" style="color: #999;">(Optional in test mode)</span>
+                        <button class="btn-info" onclick="loadTenants()" style="display: inline-block; width: auto; padding: 5px 10px; margin-left: 10px; font-size: 0.85em;"><span data-i18n="refresh">🔄 Refresh</span></button>
+                    </label>
+                    <select id="tenantId">
+                        <option value="" data-i18n="selectTenant">-- Select Tenant --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Agent ID <span data-i18n="optional" style="color: #999;">(Optional)</span></label>
+                    <select id="agentId">
+                        <option value="" data-i18n="selectTenantFirst">-- Select Tenant First --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Business Number <span data-i18n="optional" style="color: #999;">(Optional)</span></label>
+                    <input type="text" id="businessNumber" placeholder="16206469712">
+                </div>
+                <div class="form-group">
+                    <label>Call ID</label>
+                    <input type="text" id="callId" placeholder="test-call-">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="contactPhone">Contact Phone</label>
+                    <input type="text" id="contactNumber" value="+1234567890">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="contactName">Contact Name</label>
+                    <input type="text" id="contactName" value="Test User">
+                </div>
+                <button class="btn-info" onclick="generateCallId()"><span data-i18n="generateCallId">🎲 Generate Call ID</span></button>
+                <button class="btn-info" onclick="checkHealth()"><span data-i18n="healthCheck">❤️ Health Check</span></button>
+                <button class="btn-warning" onclick="simulateRateLimitUpdate()"><span data-i18n="simulateRateLimit">⚡ Simulate Rate Limit</span></button>
+            </div>
+
+            <!-- WebRTC Control Section -->
+            <div class="card">
+                <h2 data-i18n="webrtcCall">🎙️ WebRTC Call</h2>
+                <div class="form-group">
+                    <label data-i18n="audioCodec">Audio Codec</label>
+                    <select id="audioCodec">
+                        <option value="opus" data-i18n="opusRecommended">Opus (Recommended)</option>
+                        <option value="pcmu">PCMU</option>
+                        <option value="pcma">PCMA</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="pttMode" style="width: auto; transform: scale(1.5);">
+                        <span data-i18n="pttModeLabel">🎤 PTT Mode (Push to Talk)</span>
+                    </label>
+                </div>
+                
+                <div id="iceStrategyInfo" style="font-size: 0.85em; color: #666; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 5px; line-height: 1.4;">
+                    <strong data-i18n="connectionStrategy">🌐 Connection Strategy (Auto)</strong><br>
+                    <span id="iceStrategyText" data-i18n="detecting">Detecting...</span>
+                </div>
+
+                <div style="margin: 15px 0; padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="forceTurnCheckbox" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer;" onchange="updateForceTurnWarning()">
+                        <span style="font-size: 0.95em; color: #333;">
+                            <strong data-i18n="forceTurnLabel">🔄 Force TURN relay only</strong>
+                            <span style="display: block; font-size: 0.85em; color: #666; margin-top: 4px;" data-i18n="forceTurnDesc">
+                                (Test TURN server connectivity - forces all traffic through TURN relay)
+                            </span>
+                        </span>
+                    </label>
+                    <div id="forceTurnWarning" style="display: none; margin-top: 10px; padding: 8px; background: #fff; border-left: 3px solid #ff9800; font-size: 0.85em; color: #ff6b6b;">
+                        <strong>⚠️ Warning:</strong> <span data-i18n="forceTurnWarningText">Not recommended for localhost testing. Server may not have TURN configured.</span>
+                    </div>
+                </div>
+                
+                <button class="btn-success" id="startCallBtn" onclick="startWebRTCCall()"><span data-i18n="startCall">📞 Start Call</span></button>
+                <button class="btn-danger" id="endCallBtn" onclick="endCall()" disabled><span data-i18n="endCall">🛑 End Call</span></button>
+                <button class="btn-warning" id="pttBtn" disabled style="display: none;"><span data-i18n="holdToTalk">🎤 Hold to Talk</span></button>
+
+                <div class="audio-controls">
+                    <label data-i18n="micVolume">🎤 Microphone Volume (Send)</label>
+                    <div class="volume-meter">
+                        <div id="volumeBar" class="volume-bar"></div>
+                    </div>
+                    
+                    <label style="margin-top: 10px;" data-i18n="aiAudio">🔊 AI Audio (Receive)</label>
+                    <div class="volume-meter">
+                        <div id="remoteVolumeBar" class="volume-bar"></div>
+                    </div>
+                    <div id="audioStatus" data-i18n="waitingAudio" style="font-size: 0.9em; color: #666; margin-top: 5px;">Waiting for audio...</div>
+                </div>
+
+                <div class="connection-state" id="connectionState" data-i18n="notConnected">Not Connected</div>
+            </div>
+
+            <!-- Conversation History -->
+            <div class="card">
+                <h2 data-i18n="conversationHistory">💬 Conversation History</h2>
+                <div id="conversationHistory" class="conversation-box">
+                    <div class="empty-state" data-i18n="waitingConversation">Waiting for conversation...</div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn-info" onclick="exportConversation()" style="flex: 1;"><span data-i18n="export">📥 Export</span></button>
+                    <button class="btn-info" onclick="clearConversation()" style="flex: 1;"><span data-i18n="clear">🗑️ Clear</span></button>
+                </div>
+                <div id="conversationStats" class="conversation-stats">
+                    <span data-i18n="userMessages">User: 0 messages</span> | <span data-i18n="aiMessages">AI: 0 messages</span>
+                </div>
+            </div>
+
+            <!-- Log Section -->
+            <div class="card">
+                <h2 data-i18n="connectionStatus">📊 Connection Status</h2>
+                <div id="webrtcStatus" class="status-box" data-i18n="waitingToStart">Waiting to start...</div>
+                <button class="btn-info" onclick="clearWebRTCStatus()"><span data-i18n="clearLogs">🗑️ Clear Logs</span></button>
+            </div>
+
+            <!-- Rate Limits Information -->
+            <div class="card">
+                <h2 data-i18n="rateLimits">⚡ API Rate Limits</h2>
+                <div class="rate-limit-info">
+                    <div class="rate-item">
+                        <label data-i18n="requestsLimit">Requests Limit</label>
+                        <div class="rate-bar-container">
+                            <div id="requestsBar" class="rate-bar"></div>
+                        </div>
+                        <div id="requestsText" class="rate-text" data-i18n="unknown">Unknown</div>
+                    </div>
+                    <div class="rate-item">
+                        <label data-i18n="tokensLimit">Tokens Limit</label>
+                        <div class="rate-bar-container">
+                            <div id="tokensBar" class="rate-bar"></div>
+                        </div>
+                        <div id="tokensText" class="rate-text" data-i18n="unknown">Unknown</div>
+                    </div>
+                    <div class="rate-item">
+                        <label data-i18n="inputTokens">Input Tokens</label>
+                        <div class="rate-bar-container">
+                            <div id="inputTokensBar" class="rate-bar"></div>
+                        </div>
+                        <div id="inputTokensText" class="rate-text" data-i18n="unknown">Unknown</div>
+                    </div>
+                    <div class="rate-item">
+                        <label data-i18n="outputTokens">Output Tokens</label>
+                        <div class="rate-bar-container">
+                            <div id="outputTokensBar" class="rate-bar"></div>
+                        </div>
+                        <div id="outputTokensText" class="rate-text" data-i18n="unknown">Unknown</div>
+                    </div>
+                </div>
+                <div id="rateLimitUpdate" class="rate-update-time" data-i18n="neverUpdated">Never updated</div>
+            </div>
+
+            <!-- HTTP Test Section -->
+            <div class="card">
+                <h2 data-i18n="httpTest">📡 HTTP API Test</h2>
+                <button class="btn-primary" onclick="sendWebhook()"><span data-i18n="sendWebhook">📲 Send Webhook</span></button>
+                <button class="btn-success" onclick="sendNewCall()"><span data-i18n="newCallHttp">📞 New Call (HTTP)</span></button>
+                <button class="btn-danger" onclick="terminateCall()"><span data-i18n="terminateCallHttp">🛑 Terminate Call (HTTP)</span></button>
+                <button class="btn-info" onclick="getStatus()"><span data-i18n="getStatus">📈 Get Status</span></button>
+            </div>
+
+            <!-- HTTP Response Section -->
+            <div class="card full-width">
+                <h2 data-i18n="httpResponse">📋 HTTP Response</h2>
+                <div id="httpResponse" class="status-box" data-i18n="waitingRequest">Waiting for request...</div>
+                <button class="btn-info" onclick="clearHttpResponse()"><span data-i18n="clearResponse">🗑️ Clear Response</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Audio Element -->
+    <audio id="remoteAudio" autoplay playsinline></audio>
+
+    <script>
+        // ========== Internationalization (i18n) System ==========
+        let currentLang = localStorage.getItem('preferred_language') || 'en';
+
+        const translations = {
+            title: {
+                zh: '🎙️ Wati Webhook WebRTC 测试客户端',
+                en: '🎙️ Wati Webhook WebRTC Test Client'
+            },
+            subtitle: {
+                zh: '完整模拟通话流程，包括 WebRTC 音频传输',
+                en: 'Complete call flow simulation with WebRTC audio transmission'
+            },
+            config: {
+                zh: '⚙️ 配置',
+                en: '⚙️ Configuration'
+            },
+            serverAddress: {
+                zh: '服务器地址',
+                en: 'Server Address'
+            },
+            testMode: {
+                zh: '🧪 测试模式',
+                en: '🧪 Test Mode'
+            },
+            enabled: {
+                zh: '（已启用）',
+                en: '(Enabled)'
+            },
+            disabled: {
+                zh: '（已禁用）',
+                en: '(Disabled)'
+            },
+            testModeDesc: {
+                zh: '<strong>测试模式</strong>：跳过 Tenant 验证，不调用 Wati API<br><strong>生产模式</strong>：完整验证，调用 Wati API',
+                en: '<strong>Test Mode</strong>: Skip tenant validation, no Wati API calls<br><strong>Production Mode</strong>: Full validation with Wati API calls'
+            },
+            refresh: {
+                zh: '🔄 刷新',
+                en: '🔄 Refresh'
+            },
+            selectTenant: {
+                zh: '-- 选择 Tenant --',
+                en: '-- Select Tenant --'
+            },
+            optional: {
+                zh: '(可选)',
+                en: '(Optional)'
+            },
+            selectTenantFirst: {
+                zh: '-- 先选择 Tenant --',
+                en: '-- Select Tenant First --'
+            },
+            contactPhone: {
+                zh: '联系电话',
+                en: 'Contact Phone'
+            },
+            contactName: {
+                zh: '联系人名称',
+                en: 'Contact Name'
+            },
+            generateCallId: {
+                zh: '🎲 生成 Call ID',
+                en: '🎲 Generate Call ID'
+            },
+            healthCheck: {
+                zh: '❤️ 健康检查',
+                en: '❤️ Health Check'
+            },
+            simulateRateLimit: {
+                zh: '⚡ 模拟速率限制',
+                en: '⚡ Simulate Rate Limit'
+            },
+            webrtcCall: {
+                zh: '🎙️ WebRTC 通话',
+                en: '🎙️ WebRTC Call'
+            },
+            audioCodec: {
+                zh: '音频编解码器',
+                en: 'Audio Codec'
+            },
+            opusRecommended: {
+                zh: 'Opus (推荐)',
+                en: 'Opus (Recommended)'
+            },
+            pttModeLabel: {
+                zh: '🎤 PTT 模式（按住说话）',
+                en: '🎤 PTT Mode (Push to Talk)'
+            },
+            forceTurnLabel: {
+                zh: '🔄 强制仅使用 TURN 中继',
+                en: '🔄 Force TURN relay only'
+            },
+            forceTurnDesc: {
+                zh: '（测试 TURN 服务器连接 - 强制所有流量通过 TURN 中继）',
+                en: '(Test TURN server connectivity - forces all traffic through TURN relay)'
+            },
+            forceTurnWarningText: {
+                zh: '不推荐在 localhost 测试时使用。服务器可能没有配置 TURN。',
+                en: 'Not recommended for localhost testing. Server may not have TURN configured.'
+            },
+            startCall: {
+                zh: '📞 开始通话',
+                en: '📞 Start Call'
+            },
+            endCall: {
+                zh: '🛑 结束通话',
+                en: '🛑 End Call'
+            },
+            holdToTalk: {
+                zh: '🎤 按住说话',
+                en: '🎤 Hold to Talk'
+            },
+            speaking: {
+                zh: '🔴 正在说话...',
+                en: '🔴 Speaking...'
+            },
+            connectionStatus: {
+                zh: '📊 连接状态',
+                en: '📊 Connection Status'
+            },
+            conversationHistory: {
+                zh: '💬 对话历史',
+                en: '💬 Conversation History'
+            },
+            rateLimits: {
+                zh: '⚡ API 速率限制',
+                en: '⚡ API Rate Limits'
+            },
+            httpTest: {
+                zh: '📡 HTTP API 测试',
+                en: '📡 HTTP API Test'
+            },
+            httpResponse: {
+                zh: '📋 HTTP 响应',
+                en: '📋 HTTP Response'
+            },
+            productionMode: {
+                zh: '🏢 生产模式',
+                en: '🏢 Production Mode'
+            },
+            testModeOptional: {
+                zh: '(测试模式下可选)',
+                en: '(Optional in test mode)'
+            },
+            productionModeRequired: {
+                zh: '(生产模式下必需)',
+                en: '(Required in production mode)'
+            },
+            switchTo: {
+                zh: '切换到',
+                en: 'Switch to '
+            },
+            currentMode: {
+                zh: '当前模式',
+                en: 'Current mode'
+            },
+            micVolume: {
+                zh: '🎤 麦克风音量（发送）',
+                en: '🎤 Microphone Volume (Send)'
+            },
+            aiAudio: {
+                zh: '🔊 AI 音频（接收）',
+                en: '🔊 AI Audio (Receive)'
+            },
+            waitingAudio: {
+                zh: '等待音频...',
+                en: 'Waiting for audio...'
+            },
+            notConnected: {
+                zh: '未连接',
+                en: 'Not Connected'
+            },
+            waitingToStart: {
+                zh: '等待开始...',
+                en: 'Waiting to start...'
+            },
+            clearLogs: {
+                zh: '🗑️ 清空日志',
+                en: '🗑️ Clear Logs'
+            },
+            waitingConversation: {
+                zh: '等待对话开始...',
+                en: 'Waiting for conversation...'
+            },
+            export: {
+                zh: '📥 导出',
+                en: '📥 Export'
+            },
+            clear: {
+                zh: '🗑️ 清空',
+                en: '🗑️ Clear'
+            },
+            userMessages: {
+                zh: '用户: 0 条',
+                en: 'User: 0 messages'
+            },
+            aiMessages: {
+                zh: 'AI: 0 条',
+                en: 'AI: 0 messages'
+            },
+            requestsLimit: {
+                zh: '请求数限制',
+                en: 'Requests Limit'
+            },
+            tokensLimit: {
+                zh: 'Token 限制',
+                en: 'Tokens Limit'
+            },
+            inputTokens: {
+                zh: '输入 Token',
+                en: 'Input Tokens'
+            },
+            outputTokens: {
+                zh: '输出 Token',
+                en: 'Output Tokens'
+            },
+            unknown: {
+                zh: '未知',
+                en: 'Unknown'
+            },
+            neverUpdated: {
+                zh: '从未更新',
+                en: 'Never updated'
+            },
+            sendWebhook: {
+                zh: '📲 发送 Webhook',
+                en: '📲 Send Webhook'
+            },
+            newCallHttp: {
+                zh: '📞 新建通话 (HTTP)',
+                en: '📞 New Call (HTTP)'
+            },
+            terminateCallHttp: {
+                zh: '🛑 终止通话 (HTTP)',
+                en: '🛑 Terminate Call (HTTP)'
+            },
+            getStatus: {
+                zh: '📈 获取状态',
+                en: '📈 Get Status'
+            },
+            waitingRequest: {
+                zh: '等待请求...',
+                en: 'Waiting for request...'
+            },
+            clearResponse: {
+                zh: '🗑️ 清空响应',
+                en: '🗑️ Clear Response'
+            },
+            // New: Connection strategy related
+            connectionStrategy: {
+                zh: '🌐 连接策略（自动）',
+                en: '🌐 Connection Strategy (Auto)'
+            },
+            detecting: {
+                zh: '检测中...',
+                en: 'Detecting...'
+            },
+            localEnv: {
+                zh: '本地开发',
+                en: 'Local Development'
+            },
+            cloudEnv: {
+                zh: '云端部署',
+                en: 'Cloud Deployment'
+            },
+            stunDirect: {
+                zh: 'STUN直连',
+                en: 'STUN Direct'
+            },
+            autoNegotiation: {
+                zh: '自动协商连接方式',
+                en: 'Auto-negotiate connection'
+            },
+            intelligentRouting: {
+                zh: '智能选择最优路径（Direct > STUN）',
+                en: 'Smart routing (Direct > STUN)'
+            },
+            lowestLatency: {
+                zh: '最低延迟，直接连接',
+                en: 'Lowest latency, direct connection'
+            },
+            expectedLatency: {
+                zh: '预期延迟',
+                en: 'Expected Latency'
+            },
+            simpleConfig: {
+                zh: '配置简单，无需公网IP',
+                en: 'Simple config, no public IP needed'
+            },
+            actualConnection: {
+                zh: '实际连接',
+                en: 'Actual Connection'
+            },
+            directConnection: {
+                zh: '直连',
+                en: 'Direct'
+            },
+            bestPerformance: {
+                zh: '最佳性能',
+                en: 'Best Performance'
+            },
+            stunPenetration: {
+                zh: 'STUN穿透',
+                en: 'STUN Penetration'
+            },
+            // Log message translations
+            log: {
+                // WebRTC logs
+                requestingMic: {
+                    zh: '🎤 请求麦克风权限...',
+                    en: '🎤 Requesting microphone permission...'
+                },
+                micGranted: {
+                    zh: '✅ 麦克风权限已获取',
+                    en: '✅ Microphone permission granted'
+                },
+                creatingOffer: {
+                    zh: '📋 创建 SDP Offer...',
+                    en: '📋 Creating SDP Offer...'
+                },
+                offerCreated: {
+                    zh: '✅ SDP Offer 已创建',
+                    en: '✅ SDP Offer created'
+                },
+                newCallID: {
+                    zh: '📞 新通话 Call ID',
+                    en: '📞 New call Call ID'
+                },
+                clearedConversation: {
+                    zh: '🗑️ 已清空上次对话历史',
+                    en: '🗑️ Cleared previous conversation history'
+                },
+                addedTrack: {
+                    zh: '📤 已添加音轨',
+                    en: '📤 Added track'
+                },
+                pttModeMuted: {
+                    zh: 'PTT模式，初始静音',
+                    en: 'PTT mode, initially muted'
+                },
+                cloudEnvStun: {
+                    zh: '🌐 云端环境：使用STUN连接',
+                    en: '🌐 Cloud env: Using STUN connection'
+                },
+                localEnvStun: {
+                    zh: '🏠 本地环境：使用 STUN 直连',
+                    en: '🏠 Local env: Using STUN direct connection'
+                },
+                connectionState: {
+                    zh: '🔗 连接状态',
+                    en: '🔗 Connection state'
+                },
+                iceState: {
+                    zh: '🧊 ICE 连接状态',
+                    en: '🧊 ICE connection state'
+                },
+                iceGathering: {
+                    zh: '🌐 ICE 收集状态',
+                    en: '🌐 ICE gathering state'
+                },
+                iceCandidate: {
+                    zh: '🔍 发现 ICE Candidate',
+                    en: '🔍 Found ICE Candidate'
+                },
+                iceCandidateComplete: {
+                    zh: '✅ ICE Candidate 收集完成',
+                    en: '✅ ICE candidates gathering complete'
+                },
+                candidateStats: {
+                    zh: '📊 候选者统计',
+                    en: '📊 Candidate stats'
+                },
+                receivedTrack: {
+                    zh: '📥 收到远程音轨',
+                    en: '📥 Received remote track'
+                },
+                audioConnected: {
+                    zh: '🔊 远程音频已连接到 <audio> 元素',
+                    en: '🔊 Remote audio connected to <audio> element'
+                },
+                audioPlaying: {
+                    zh: '🔊 OpenAI 音频开始播放',
+                    en: '🔊 OpenAI audio started playing'
+                },
+                connectionFailed: {
+                    zh: '❌ WebRTC 连接失败！可能原因：',
+                    en: '❌ WebRTC connection failed! Possible reasons:'
+                },
+                serverUnreachable: {
+                    zh: '1. 服务器不可达或防火墙阻止',
+                    en: '1. Server unreachable or firewall blocked'
+                },
+                natFailure: {
+                    zh: '2. NAT 穿透失败',
+                    en: '2. NAT traversal failed'
+                },
+                iceNegotiationFailed: {
+                    zh: '3. ICE 候选者协商失败',
+                    en: '3. ICE candidate negotiation failed'
+                },
+                connectionDisconnected: {
+                    zh: '⚠️ WebRTC 连接断开',
+                    en: '⚠️ WebRTC connection disconnected'
+                },
+                endingCall: {
+                    zh: '📞 结束通话...',
+                    en: '📞 Ending call...'
+                },
+                notifyingServer: {
+                    zh: '通知服务器终止通话...',
+                    en: 'Notifying server to terminate call...'
+                },
+                callTerminated: {
+                    zh: '✅ 服务器已终止通话',
+                    en: '✅ Server terminated call'
+                },
+                callFullyEnded: {
+                    zh: '✅ 通话已完全结束',
+                    en: '✅ Call fully ended'
+                },
+                conversationKept: {
+                    zh: '💬 对话历史已保留，点击"清空对话"按钮可清除',
+                    en: '💬 Conversation history kept, click "Clear" to remove'
+                },
+                actualConnectionType: {
+                    zh: '实际连接方式',
+                    en: 'Actual connection type'
+                },
+                roundTripTime: {
+                    zh: '📊 往返延迟(RTT)',
+                    en: '📊 Round-trip time (RTT)'
+                },
+                local: {
+                    zh: '📍 本地',
+                    en: '📍 Local'
+                },
+                remote: {
+                    zh: '📍 远程',
+                    en: '📍 Remote'
+                },
+                clientReady: {
+                    zh: '✅ WebRTC 测试客户端已就绪',
+                    en: '✅ WebRTC test client ready'
+                },
+                httpClientReady: {
+                    zh: '✅ HTTP 测试客户端已就绪',
+                    en: '✅ HTTP test client ready'
+                },
+                generatedCallID: {
+                    zh: '✅ 已生成新的 Call ID',
+                    en: '✅ Generated new Call ID'
+                },
+                logsCleared: {
+                    zh: '日志已清空',
+                    en: 'Logs cleared'
+                },
+                responseCleared: {
+                    zh: '响应已清空',
+                    en: 'Response cleared'
+                },
+                conversationCleared: {
+                    zh: '对话已清空',
+                    en: 'Conversation cleared'
+                },
+                conversationExported: {
+                    zh: '📥 对话历史已导出为文本文件',
+                    en: '📥 Conversation history exported as text file'
+                },
+                conversationExportedJSON: {
+                    zh: '📥 对话历史 JSON 格式已导出',
+                    en: '📥 Conversation history exported as JSON'
+                },
+                receivedMessages: {
+                    zh: '📨 收到',
+                    en: '📨 Received'
+                },
+                newMessages: {
+                    zh: '条新消息',
+                    en: 'new messages'
+                },
+                autoServerDetect: {
+                    zh: '🔧 自动检测服务器地址',
+                    en: '🔧 Auto-detected server address'
+                },
+                environment: {
+                    zh: '📍 环境',
+                    en: '📍 Environment'
+                },
+                protocol: {
+                    zh: '协议',
+                    en: 'Protocol'
+                },
+                used: {
+                    zh: '已用',
+                    en: 'used'
+                },
+                loadingTenants: {
+                    zh: '🔄 加载 Tenants...',
+                    en: '🔄 Loading Tenants...'
+                },
+                loadedTenants: {
+                    zh: '✅ 成功加载',
+                    en: '✅ Successfully loaded'
+                },
+                tenants: {
+                    zh: '个 Tenants',
+                    en: 'Tenants'
+                },
+                loadTenantsError: {
+                    zh: '❌ 加载 Tenants 失败',
+                    en: '❌ Failed to load Tenants'
+                },
+                loadingAgents: {
+                    zh: '🔄 加载 Agents...',
+                    en: '🔄 Loading Agents...'
+                },
+                loadedAgents: {
+                    zh: '✅ 成功加载',
+                    en: '✅ Successfully loaded'
+                },
+                agents: {
+                    zh: '个 Agents',
+                    en: 'Agents'
+                },
+                loadAgentsError: {
+                    zh: '❌ 加载 Agents 失败',
+                    en: '❌ Failed to load Agents'
+                },
+                selectAgentOptional: {
+                    zh: '-- 选择 Agent (可选) --',
+                    en: '-- Select Agent (Optional) --'
+                },
+                noAgentsAvailable: {
+                    zh: '-- 该 Tenant 暂无 Agent --',
+                    en: '-- No Agents Available --'
+                },
+                tenantHasNoAgents: {
+                    zh: '没有可用的 Agents',
+                    en: 'has no available Agents'
+                },
+                checkingAudioStatus: {
+                    zh: '🔬 检查音频状态...',
+                    en: '🔬 Checking audio status...'
+                },
+                rateLimitWarning: {
+                    zh: '速率限制接近上限！剩余',
+                    en: 'Rate limit approaching! Remaining'
+                }
+            }
+        };
+
+        function t(key) {
+            return translations[key] ? translations[key][currentLang] : key;
+        }
+        
+        // Enhanced translation function, supports nested paths
+        function tLog(path) {
+            const keys = path.split('.');
+            let result = translations;
+            for (const key of keys) {
+                if (result && result[key]) {
+                    result = result[key];
+                } else {
+                    return path; // Return original path if not found
+                }
+            }
+            return result[currentLang] || path;
+        }
+
+        function switchLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('preferred_language', lang);
+            
+            // Update button states
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Apply translations
+            applyTranslations();
+            
+            // Update dynamic content
+            updateConnectionStrategyInfo();
+            updateConversationStats();
+        }
+
+        function updateForceTurnWarning() {
+            const checkbox = document.getElementById('forceTurnCheckbox');
+            const warning = document.getElementById('forceTurnWarning');
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            // Show warning only if checked AND on localhost
+            if (checkbox.checked && isLocal) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        function applyTranslations() {
+            // Translate elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[key]) {
+                    if (element.tagName === 'INPUT' && element.type === 'button') {
+                        element.value = t(key);
+                    } else if (element.tagName === 'OPTION') {
+                        element.textContent = t(key);
+                    } else {
+                        element.innerHTML = t(key);
+                    }
+                }
+            });
+        }
+
+        // Apply initial translation
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTranslations();
+            // Set initial button state
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                if ((currentLang === 'zh' && btn.textContent.includes('中文')) ||
+                    (currentLang === 'en' && btn.textContent.includes('EN'))) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        });
+
+        // ========== WebRTC Variables ==========
+        // WebRTC related variables
+        let peerConnection = null;
+        let localStream = null;
+        let audioContext = null;
+        let analyser = null;
+        
+        // 🔍 Audio diagnostic function (can be called in console)
+        window.diagnoseAudio = function() {
+            const audio = document.getElementById('remoteAudio');
+            console.log('=== 🔍 音频诊断报告 ===');
+            console.log('1. 音频元素:', audio ? '✅ 存在' : '❌ 不存在');
+            if (audio) {
+                console.log('2. volume:', audio.volume);
+                console.log('3. muted:', audio.muted);
+                console.log('4. paused:', audio.paused);
+                console.log('5. currentTime:', audio.currentTime.toFixed(2) + 's');
+                console.log('6. readyState:', audio.readyState, '(4=HAVE_ENOUGH_DATA)');
+                console.log('7. srcObject:', audio.srcObject ? '✅ 有音频流' : '❌ 无音频流');
+                
+                if (audio.srcObject) {
+                    const tracks = audio.srcObject.getAudioTracks();
+                    console.log('8. 音频轨道数:', tracks.length);
+                    tracks.forEach((track, i) => {
+                        console.log(`   轨道${i}:`, {
+                            enabled: track.enabled,
+                            muted: track.muted,
+                            readyState: track.readyState,
+                            label: track.label
+                        });
+                    });
+                }
+                
+                // Try manual playback
+                console.log('9. Attempting manual playback...');
+                audio.play().then(() => {
+                    console.log('✅ 手动播放成功');
+                }).catch(err => {
+                    console.log('❌ 手动播放失败:', err.message);
+                });
+            }
+            console.log('=== 诊断结束 ===');
+            console.log('💡 如需再次检查，请在控制台运行: diagnoseAudio()');
+        };
+        let remoteAnalyser = null;
+        let isMuted = false;
+        let isPTTActive = false;
+        let remoteAudioContext = null;
+
+        // Rate limit tracking
+        let rateLimits = {
+            requests: { remaining: 0, limit: 0 },
+            tokens: { remaining: 0, limit: 0 },
+            input_tokens: { remaining: 0, limit: 0 },
+            output_tokens: { remaining: 0, limit: 0 }
+        };
+
+        // 对话历史追踪
+        let conversationMessages = [];
+        let userMessageCount = 0;
+        let assistantMessageCount = 0;
+
+        // 生成 Call ID
+        function generateCallId() {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 8);
+            document.getElementById('callId').value = `test-call-${timestamp}-${random}`;
+            logWebRTC(tLog('log.generatedCallID'));
+        }
+
+        // WebRTC 日志
+        function logWebRTC(message, type = 'info') {
+            const statusBox = document.getElementById('webrtcStatus');
+            const timestamp = new Date().toLocaleTimeString();
+            statusBox.innerHTML += `[${timestamp}] ${message}\n`;
+            statusBox.scrollTop = statusBox.scrollHeight;
+            
+            if (type === 'success') statusBox.className = 'status-box success';
+            else if (type === 'error') statusBox.className = 'status-box error';
+            else statusBox.className = 'status-box info';
+        }
+
+        function clearWebRTCStatus() {
+            document.getElementById('webrtcStatus').innerHTML = tLog('log.logsCleared');
+        }
+
+        // HTTP logs
+        function logHTTP(message, type = 'info') {
+            const responseBox = document.getElementById('httpResponse');
+            const timestamp = new Date().toLocaleTimeString();
+            responseBox.innerHTML += `[${timestamp}] ${message}\n`;
+            responseBox.scrollTop = responseBox.scrollHeight;
+            
+            if (type === 'success') responseBox.className = 'status-box success';
+            else if (type === 'error') responseBox.className = 'status-box error';
+        }
+
+        function clearHttpResponse() {
+            document.getElementById('httpResponse').innerHTML = tLog('log.responseCleared');
+        }
+
+        // 更新连接状态显示
+        function updateConnectionState(state) {
+            const stateElement = document.getElementById('connectionState');
+            const stateMap = currentLang === 'zh' ? {
+                'new': { text: '新建', class: 'state-new' },
+                'connecting': { text: '连接中...', class: 'state-connecting' },
+                'connected': { text: '已连接', class: 'state-connected' },
+                'failed': { text: '连接失败', class: 'state-failed' },
+                'closed': { text: '已关闭', class: 'state-closed' }
+            } : {
+                'new': { text: 'New', class: 'state-new' },
+                'connecting': { text: 'Connecting...', class: 'state-connecting' },
+                'connected': { text: 'Connected', class: 'state-connected' },
+                'failed': { text: 'Failed', class: 'state-failed' },
+                'closed': { text: 'Closed', class: 'state-closed' }
+            };
+            
+            const stateInfo = stateMap[state] || { text: state, class: 'state-new' };
+            stateElement.textContent = stateInfo.text;
+            stateElement.className = 'connection-state ' + stateInfo.class;
+        }
+
+        // Start WebRTC call
+        async function startWebRTCCall() {
+            const tenantId = document.getElementById('tenantId').value;
+            
+            if (!tenantId) {
+                alert('Please select a Tenant');
+                return;
+            }
+
+            // 🔊 Critical! Unlock audio playback immediately in the user click button sync context
+            logWebRTC('🔊 Starting to unlock audio playback permission...', 'info');
+            const remoteAudio = document.getElementById('remoteAudio');
+            
+            // Ensure audio element state
+            remoteAudio.volume = 1.0;
+            remoteAudio.muted = true;
+            
+            // Synchronously attempt playback (this is the key step)
+            try {
+                const playPromise = remoteAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        remoteAudio.pause();
+                        remoteAudio.currentTime = 0;
+                        remoteAudio.muted = false;
+                        logWebRTC('✅ Audio playback permission unlocked successfully', 'success');
+                    }).catch(err => {
+                        remoteAudio.muted = false;
+                        logWebRTC(`❌ Audio unlock failed: ${err.message}`, 'error');
+                        logWebRTC(`   Error name: ${err.name}`, 'error');
+                    });
+                }
+            } catch (e) {
+                logWebRTC(`❌ Audio unlock exception: ${e.message}`, 'error');
+            }
+
+            // Auto-generate new Call ID (ensure each call uses a new ID)
+            generateCallId();
+            const callId = document.getElementById('callId').value;
+            logWebRTC(`📞 New Call ID: ${callId}`);
+
+            // Clear previous conversation history
+            clearConversation();
+            logWebRTC('🗑️ Cleared previous conversation history');
+
+            try {
+                logWebRTC('🎤 Requesting microphone permission...');
+                
+                // Get microphone permission
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                logWebRTC('✅ Microphone permission granted', 'success');
+
+                // Setup volume monitoring
+                setupVolumeMonitor(localStream);
+
+                // Create PeerConnection
+                await createPeerConnection();
+
+                // Add local tracks
+                const pttMode = document.getElementById('pttMode').checked;
+                localStream.getTracks().forEach(track => {
+                    // If PTT mode, disable track by default
+                    if (pttMode) {
+                        track.enabled = false;
+                        logWebRTC(`📤 Added track (PTT mode, initially muted): ${track.kind}`);
+                    } else {
+                        logWebRTC(`📤 Added track: ${track.kind}`);
+                    }
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Create Offer
+                logWebRTC('📋 Creating SDP Offer...');
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                logWebRTC(`✅ SDP Offer created (${offer.sdp.length} bytes)`, 'success');
+
+                // Check if Force TURN is enabled - wait for ICE gathering
+                const forceTurn = document.getElementById('forceTurnCheckbox').checked;
+                if (forceTurn) {
+                    logWebRTC('⏳ Force TURN mode: waiting for ICE gathering to complete...', 'info');
+                    // Wait for ICE gathering to complete (with 10s timeout)
+                    const gatheringPromise = new Promise((resolve) => {
+                        if (peerConnection.iceGatheringState === 'complete') {
+                            resolve(true);
+                        } else {
+                            const checkGathering = () => {
+                                if (peerConnection.iceGatheringState === 'complete') {
+                                    peerConnection.removeEventListener('icegatheringstatechange', checkGathering);
+                                    resolve(true);
+                                }
+                            };
+                            peerConnection.addEventListener('icegatheringstatechange', checkGathering);
+                        }
+                    });
+                    
+                    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(false), 10000));
+                    const completed = await Promise.race([gatheringPromise, timeoutPromise]);
+                    
+                    if (completed) {
+                        logWebRTC('✅ ICE gathering complete, sending offer with relay candidates', 'success');
+                    } else {
+                        logWebRTC('⚠️ ICE gathering timeout, sending offer anyway', 'warning');
+                    }
+                }
+
+                // Send Webhook to server (with ICE candidates if Force TURN)
+                const sdpToSend = peerConnection.localDescription.sdp;
+                await sendWebhookWithSDP(sdpToSend);
+
+                // Update UI
+                document.getElementById('startCallBtn').disabled = true;
+                document.getElementById('endCallBtn').disabled = false;
+                
+                // Show different buttons based on PTT mode
+                if (pttMode) {
+                    document.getElementById('pttBtn').disabled = false;
+                    document.getElementById('pttBtn').style.display = 'block';
+                    setupPTTButton();
+                } else {
+                    document.getElementById('pttBtn').style.display = 'none';
+                }
+
+            } catch (error) {
+                logWebRTC(`❌ Error: ${error.message}`, 'error');
+                console.error('WebRTC Error:', error);
+            }
+        }
+
+        // Create PeerConnection
+        async function createPeerConnection() {
+            // Auto-detect environment: local development vs cloud deployment
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            // Fetch WebRTC configuration from server (includes dynamic TURN credentials)
+            let configuration = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ],
+                iceCandidatePoolSize: 10
+            };
+
+            try {
+                logWebRTC('📡 Fetching WebRTC configuration from server...', 'info');
+                const response = await fetch('/api/webrtc/config');
+                if (response.ok) {
+                    configuration = await response.json();
+                    const stunCount = configuration.iceServers.filter(s => s.urls[0].startsWith('stun:')).length;
+                    const turnCount = configuration.iceServers.filter(s => s.urls[0].startsWith('turn:')).length;
+                    logWebRTC(`✅ Server configuration loaded: ${stunCount} STUN, ${turnCount} TURN server(s)`, 'success');
+                    if (turnCount > 0) {
+                        logWebRTC('🔄 Using Twilio TURN servers for better connectivity', 'info');
+                    }
+                } else {
+                    logWebRTC('⚠️ Failed to fetch server config, using default STUN', 'warning');
+                }
+            } catch (error) {
+                logWebRTC('⚠️ Error fetching WebRTC config: ' + error.message, 'warning');
+                logWebRTC('   Using default STUN configuration', 'info');
+            }
+
+            // Check if "Force TURN only" is enabled
+            const forceTurn = document.getElementById('forceTurnCheckbox').checked;
+            if (forceTurn) {
+                // Warning for localhost testing
+                if (isLocal) {
+                    logWebRTC('⚠️ WARNING: Force TURN mode in localhost environment!', 'warning');
+                    logWebRTC('   Server is on localhost and may not have TURN configured.', 'warning');
+                    logWebRTC('   Connection may fail. Consider unchecking "Force TURN" for local testing.', 'warning');
+                }
+                
+                configuration.iceTransportPolicy = 'relay';
+                // Filter out STUN servers when forcing TURN only
+                configuration.iceServers = configuration.iceServers.filter(s => 
+                    s.urls[0].startsWith('turn:')
+                );
+                const turnCount = configuration.iceServers.length;
+                logWebRTC('🔄 FORCE TURN MODE: Only using TURN relay servers', 'warning');
+                logWebRTC(`   ${turnCount} TURN server(s) configured`, 'info');
+                if (turnCount === 0) {
+                    logWebRTC('⚠️ ERROR: No TURN servers available! Connection will fail.', 'error');
+                    logWebRTC('   Please configure Twilio credentials (TWILIO_ACCOUNT_SID & TWILIO_AUTH_TOKEN)', 'error');
+                    logWebRTC('   Or uncheck "Force TURN only" to use direct connection.', 'error');
+                }
+            } else {
+                // 🎯 Strategy: Use STUN/TURN servers for NAT traversal
+                if (!isLocal) {
+                    logWebRTC('🌐 Cloud environment: Using server ICE configuration', 'info');
+                } else {
+                    logWebRTC(tLog('log.localEnvStun'), 'info');
+                }
+            }
+
+            peerConnection = new RTCPeerConnection(configuration);
+            
+            // Monitor connection state (enhanced version)
+            peerConnection.onconnectionstatechange = async () => {
+                const state = peerConnection.connectionState;
+                logWebRTC(`🔗 Connection state: ${state}`, state === 'connected' ? 'success' : state === 'failed' ? 'error' : 'info');
+                updateConnectionState(state);
+                
+                // Display actual connection type when connected successfully
+                if (state === 'connected') {
+                    setTimeout(async () => {
+                        await displayActualConnectionType();
+                    }, 1000); // Wait 1 second for statistics to stabilize
+                }
+                
+                // Provide diagnostic information on connection failure
+                if (state === 'failed') {
+                    logWebRTC('❌ WebRTC connection failed! Possible reasons:', 'error');
+                    logWebRTC('   1. Server unreachable or blocked by firewall', 'error');
+                    logWebRTC('   2. NAT traversal failed', 'error');
+                    logWebRTC('   3. ICE candidate negotiation failed', 'error');
+                    diagnoseConnection();
+                }
+                
+                if (state === 'disconnected') {
+                    logWebRTC('⚠️ WebRTC connection disconnected', 'warning');
+                }
+            };
+
+            peerConnection.oniceconnectionstatechange = () => {
+                const state = peerConnection.iceConnectionState;
+                logWebRTC(`🧊 ICE connection state: ${state}`, state === 'connected' ? 'success' : state === 'failed' ? 'error' : 'info');
+                
+                // Display detailed connection info when connected
+                if (state === 'connected') {
+                    setTimeout(async () => {
+                        try {
+                            const stats = await peerConnection.getStats();
+                            let selectedPair = null;
+                            let localCandidate = null;
+                            let remoteCandidate = null;
+                            
+                            stats.forEach(report => {
+                                if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                    selectedPair = report;
+                                }
+                            });
+                            
+                            if (selectedPair) {
+                                stats.forEach(report => {
+                                    if (report.type === 'local-candidate' && report.id === selectedPair.localCandidateId) {
+                                        localCandidate = report;
+                                    }
+                                    if (report.type === 'remote-candidate' && report.id === selectedPair.remoteCandidateId) {
+                                        remoteCandidate = report;
+                                    }
+                                });
+                                
+                                if (localCandidate && remoteCandidate) {
+                                    const localType = localCandidate.candidateType;
+                                    const remoteType = remoteCandidate.candidateType;
+                                    
+                                    if (localType === 'relay' && remoteType === 'relay') {
+                                        logWebRTC('🎯 Connection Type: TURN RELAY ONLY', 'success');
+                                        logWebRTC(`   Local: ${localType} (${localCandidate.address}:${localCandidate.port})`, 'info');
+                                        logWebRTC(`   Remote: ${remoteType} (${remoteCandidate.address}:${remoteCandidate.port})`, 'info');
+                                        logWebRTC('   ✅ All traffic is relayed through TURN server', 'success');
+                                    } else if (localType === 'relay' || remoteType === 'relay') {
+                                        logWebRTC(`🔄 Connection Type: Mixed TURN (${localType} ↔ ${remoteType})`, 'info');
+                                    } else if (localType === 'srflx' || remoteType === 'srflx') {
+                                        logWebRTC(`⚡ Connection Type: STUN (${localType} ↔ ${remoteType})`, 'info');
+                                    } else {
+                                        logWebRTC(`🚀 Connection Type: Direct (${localType} ↔ ${remoteType})`, 'info');
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Failed to get connection stats:', e);
+                        }
+                    }, 1000);
+                }
+                
+                // ICE connection failure diagnosis
+                if (state === 'failed') {
+                    logWebRTC('❌ ICE connection failed! This is the most common cloud deployment issue', 'error');
+                    logWebRTC('💡 Suggestions:', 'warning');
+                    logWebRTC('   1. Ensure firewall allows UDP traffic', 'warning');
+                    logWebRTC('   2. Check ICE candidate types below', 'warning');
+                    logWebRTC('   3. Verify STUN server is reachable', 'warning');
+                }
+                
+                if (state === 'disconnected') {
+                    logWebRTC('⚠️ ICE connection disconnected, may be reconnecting...', 'warning');
+                }
+                
+                if (state === 'checking') {
+                    logWebRTC('🔍 Checking ICE candidate connectivity...', 'info');
+                }
+            };
+
+            peerConnection.onicegatheringstatechange = () => {
+                logWebRTC(`🌐 ICE gathering state: ${peerConnection.iceGatheringState}`);
+            };
+
+            let candidateCount = {
+                host: 0,
+                srflx: 0  // STUN
+            };
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candidate = event.candidate.candidate;
+                    logWebRTC(`🔍 Found ICE Candidate: ${candidate.substring(0, 80)}...`);
+                    
+                    // Analyze candidate type
+                    if (candidate.includes('typ host')) {
+                        candidateCount.host++;
+                    } else if (candidate.includes('typ srflx')) {
+                        candidateCount.srflx++;
+                    }
+                } else {
+                    logWebRTC('✅ ICE Candidate gathering complete');
+                    logWebRTC(`📊 Candidate stats: Host=${candidateCount.host}, STUN=${candidateCount.srflx}`, 'info');
+                }
+            };
+
+            // Listen for remote tracks
+            peerConnection.ontrack = async (event) => {
+                logWebRTC(`📥 Received remote track: ${event.track.kind}`, 'success');
+                const remoteAudio = document.getElementById('remoteAudio');
+                
+                // Detailed diagnostics
+                logWebRTC(`🔍 Audio element current state: paused=${remoteAudio.paused}, muted=${remoteAudio.muted}, volume=${remoteAudio.volume}`, 'info');
+                
+                if (remoteAudio.srcObject !== event.streams[0]) {
+                    remoteAudio.srcObject = event.streams[0];
+                    logWebRTC('🔊 Remote audio connected to <audio> element');
+                    
+                    // Force set audio configuration
+                    remoteAudio.volume = 1.0;
+                    remoteAudio.muted = false;
+                    logWebRTC(`🔧 Audio config set: volume=${remoteAudio.volume}, muted=${remoteAudio.muted}`, 'info');
+                    
+                    // Check audio track status
+                    const audioTracks = event.streams[0].getAudioTracks();
+                    logWebRTC(`🎵 Audio track count: ${audioTracks.length}`, 'info');
+                    if (audioTracks.length > 0) {
+                        audioTracks.forEach((track, i) => {
+                            logWebRTC(`🎵 Track${i}: enabled=${track.enabled}, muted=${track.muted}, readyState=${track.readyState}`, 'info');
+                        });
+                    }
+                    
+                    // Attempt playback
+                    logWebRTC('🔊 Attempting to start audio playback...', 'info');
+                    try {
+                        await remoteAudio.play();
+                        logWebRTC('✅ Audio playback command executed successfully', 'success');
+                        
+                        // Delayed playback status check
+                        setTimeout(() => {
+                            logWebRTC(`🔍 Playback status verification: paused=${remoteAudio.paused}, currentTime=${remoteAudio.currentTime.toFixed(2)}s`, 'info');
+                            if (remoteAudio.paused) {
+                                logWebRTC('⚠️ Warning: Audio element is paused!', 'warning');
+                                // Retry playback
+                                remoteAudio.play().then(() => {
+                                    logWebRTC('✅ Retry playback successful', 'success');
+                                }).catch(e => {
+                                    logWebRTC(`❌ Retry playback failed: ${e.message}`, 'error');
+                                });
+                            } else {
+                                logWebRTC('✅ Audio playing normally', 'success');
+                            }
+                        }, 1000);
+                    } catch (error) {
+                        logWebRTC(`❌ Audio playback failed: ${error.message}`, 'error');
+                        logWebRTC(`   Error type: ${error.name}`, 'error');
+                        logWebRTC('💡 Solution: Please click anywhere on the page to enable audio', 'info');
+                        
+                        // Add click recovery
+                        const retryPlay = () => {
+                            remoteAudio.play().then(() => {
+                                logWebRTC('✅ Audio playback successful after click', 'success');
+                            }).catch(e => {
+                                logWebRTC(`❌ Still failed after click: ${e.message}`, 'error');
+                            });
+                        };
+                        document.addEventListener('click', retryPlay, { once: true });
+                    }
+                    
+                    // Setup remote audio monitoring
+                    setupRemoteAudioMonitor(event.streams[0]);
+                    
+                    // Listen for audio playback events
+                    remoteAudio.onplay = () => {
+                        document.getElementById('audioStatus').textContent = '▶️ AI is speaking...';
+                        document.getElementById('audioStatus').style.color = '#4caf50';
+                        logWebRTC('🔊 OpenAI audio playback started');
+                    };
+                    
+                    remoteAudio.onpause = () => {
+                        document.getElementById('audioStatus').textContent = '⏸️ AI paused';
+                        document.getElementById('audioStatus').style.color = '#ff9800';
+                    };
+                    
+                    remoteAudio.onended = () => {
+                        document.getElementById('audioStatus').textContent = '✅ AI completed';
+                        document.getElementById('audioStatus').style.color = '#666';
+                    };
+                    
+                    // Listen for audio errors
+                    remoteAudio.onerror = (err) => {
+                        logWebRTC(`❌ Audio playback error: ${err}`, 'error');
+                    };
+                }
+            };
+
+            logWebRTC('✅ PeerConnection created', 'success');
+        }
+
+        // Send New Call request with SDP (based on UI selected mode)
+        async function sendWebhookWithSDP(sdp) {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const tenantId = document.getElementById('tenantId').value;
+            const agentId = document.getElementById('agentId').value;
+            const businessNumber = document.getElementById('businessNumber').value;
+            const contactName = document.getElementById('contactName').value;
+            const contactNumber = document.getElementById('contactNumber').value;
+            const callId = document.getElementById('callId').value;
+
+            // 从 UI 读取测试模式状态
+            const testMode = document.getElementById('testMode').checked;
+
+            const newCallData = {
+                callId: callId,
+                sdp: sdp
+            };
+
+            // Decide if tenant ID is required based on mode
+            if (testMode) {
+                // Test mode: tenant ID is optional
+                if (tenantId) {
+                    newCallData.tenantId = tenantId;
+                }
+            } else {
+                // Production mode: tenant ID is required
+                if (!tenantId) {
+                    logWebRTC('❌ Production mode requires Tenant ID', 'error');
+                    logHTTP('❌ Production mode requires Tenant ID', 'error');
+                    alert('Production mode requires Tenant ID');
+                    return;
+                }
+                newCallData.tenantId = tenantId;
+            }
+            
+            // Add optional fields
+            if (agentId) {
+                newCallData.agentId = agentId;
+            }
+            if (businessNumber) {
+                newCallData.businessNumber = businessNumber;
+            }
+            if (contactName) {
+                newCallData.contactName = contactName;
+            }
+            if (contactNumber) {
+                newCallData.from = contactNumber;
+            }
+
+            const endpoint = testMode ? '/wati/test/new-call' : '/wati/new-call';
+            const modeLabel = testMode ? '🧪 [Test Mode]' : '🏢 [Production Mode]';
+
+            logWebRTC(`${modeLabel} Sending New Call request to server...`);
+            logHTTP(`📤 Calling ${endpoint}: ${serverUrl}${endpoint}`);
+            logHTTP(`📦 Request data:\n${JSON.stringify({...newCallData, sdp: 'SDP content omitted...'}, null, 2)}`);
+
+            try {
+                const response = await fetch(`${serverUrl}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newCallData)
+                });
+
+                const responseText = await response.text();
+                let responseData;
+                
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (e) {
+                    responseData = responseText;
+                }
+                
+                if (response.ok) {
+                    logWebRTC(`${modeLabel} ✅ New Call request successful`, 'success');
+                    logHTTP(`✅ Response ${response.status}:\n${JSON.stringify(responseData, null, 2)}`, 'success');
+                    console.log('[New Call] Response data:', responseData);
+                    
+                    // If server returns SDP Answer, handle it here
+                    if (responseData.sdpAnswer) {
+                        logWebRTC('📥 Received SDP Answer, setting remote description...', 'info');
+                        logWebRTC(`   SDP Answer length: ${responseData.sdpAnswer.length} bytes`, 'info');
+                        
+                        // Check if SDP contains ICE candidates
+                        const candidateLines = responseData.sdpAnswer.split('\n').filter(line => line.startsWith('a=candidate:'));
+                        logWebRTC(`   ICE candidates in SDP: ${candidateLines.length}`, candidateLines.length > 0 ? 'success' : 'warning');
+                        
+                        if (candidateLines.length === 0) {
+                            logWebRTC('⚠️ WARNING: No ICE candidates in SDP answer!', 'error');
+                            logWebRTC('   Server may not have finished ICE gathering', 'error');
+                        }
+                        
+                        await peerConnection.setRemoteDescription({
+                            type: 'answer',
+                            sdp: responseData.sdpAnswer
+                        });
+                        logWebRTC('✅ Remote description set successfully', 'success');
+                    } else {
+                        logWebRTC('⚠️ No sdpAnswer in server response!', 'error');
+                        logWebRTC('   Make sure Test Mode is enabled or server is configured correctly', 'error');
+                        console.log('[Debug] Full response:', responseData);
+                    }
+                    
+                    // Start polling conversation messages (using callId, backend supports querying via external_conversation_id)
+                    const callId = document.getElementById('callId').value;
+                    console.log('[New Call] Starting conversation polling with call_id:', callId);
+                    if (callId) {
+                        startConversationPolling(callId);
+                    } else {
+                        console.warn('[New Call] No callId available, cannot start polling');
+                        logHTTP('⚠️ No callId available, cannot start conversation polling');
+                    }
+                } else {
+                    logWebRTC(`${modeLabel} ❌ New Call failed: ${response.status}`, 'error');
+                    logHTTP(`❌ Error ${response.status}:\n${JSON.stringify(responseData, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                logWebRTC(`${modeLabel} ❌ Network error: ${error.message}`, 'error');
+                logHTTP(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize audio context (solve browser autoplay policy restriction)
+        function initializeAudioContext() {
+            // Create a silent audio context to unlock audio playback
+            const unlockAudio = () => {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                gainNode.gain.value = 0; // Mute
+                
+                oscillator.start(0);
+                oscillator.stop(0.001);
+                
+                logWebRTC('✅ Audio context initialized (audio playback unlocked)', 'success');
+                
+                // Unlock remoteAudio element
+                const remoteAudio = document.getElementById('remoteAudio');
+                remoteAudio.muted = true;
+                remoteAudio.play().then(() => {
+                    remoteAudio.pause();
+                    remoteAudio.muted = false;
+                    logWebRTC('✅ Audio element unlocked', 'success');
+                }).catch(() => {
+                    // Ignore error, will retry during actual call
+                });
+                
+                audioContext.close();
+                
+                // Remove event listeners
+                document.removeEventListener('click', unlockAudio);
+                document.removeEventListener('touchstart', unlockAudio);
+            };
+            
+            // Listen for first user interaction
+            document.addEventListener('click', unlockAudio, { once: true });
+            document.addEventListener('touchstart', unlockAudio, { once: true });
+        }
+
+        // Setup volume monitoring
+        function setupVolumeMonitor(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            analyser.fftSize = 256;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function updateVolume() {
+                if (!analyser) return;
+                
+                analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                const volumePercent = Math.min(100, (average / 128) * 100);
+                
+                document.getElementById('volumeBar').style.width = volumePercent + '%';
+                requestAnimationFrame(updateVolume);
+            }
+
+            updateVolume();
+        }
+
+        // Setup remote audio monitoring
+        function setupRemoteAudioMonitor(stream) {
+            try {
+                remoteAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                remoteAnalyser = remoteAudioContext.createAnalyser();
+                const source = remoteAudioContext.createMediaStreamSource(stream);
+                source.connect(remoteAnalyser);
+                remoteAnalyser.fftSize = 256;
+
+                const bufferLength = remoteAnalyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                function updateRemoteVolume() {
+                    if (!remoteAnalyser) return;
+                    
+                    remoteAnalyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    const volumePercent = Math.min(100, (average / 128) * 100);
+                    
+                    document.getElementById('remoteVolumeBar').style.width = volumePercent + '%';
+                    
+                    // 如果检测到音频活动，更新状态
+                    if (volumePercent > 5) {
+                        document.getElementById('audioStatus').textContent = `▶️ AI 正在说话... (${Math.round(volumePercent)}%)`;
+                        document.getElementById('audioStatus').style.color = '#4caf50';
+                    }
+                    
+                    requestAnimationFrame(updateRemoteVolume);
+                }
+
+                updateRemoteVolume();
+                logWebRTC('✅ Remote audio monitoring enabled');
+            } catch (error) {
+                logWebRTC(`⚠️ Remote audio monitoring setup failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Setup PTT button events
+        function setupPTTButton() {
+            const pttBtn = document.getElementById('pttBtn');
+            
+            // 鼠标事件
+            pttBtn.onmousedown = startPTT;
+            pttBtn.onmouseup = stopPTT;
+            pttBtn.onmouseleave = stopPTT;
+            
+            // 触摸事件（移动端）
+            pttBtn.ontouchstart = (e) => {
+                e.preventDefault();
+                startPTT();
+            };
+            pttBtn.ontouchend = (e) => {
+                e.preventDefault();
+                stopPTT();
+            };
+            
+            logWebRTC('✅ PTT button configured (hold to talk, release to stop)');
+        }
+
+        // Start PTT (enable microphone)
+        function startPTT() {
+            if (!localStream || isPTTActive) return;
+            
+            isPTTActive = true;
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = true;
+            });
+            
+            const pttBtn = document.getElementById('pttBtn');
+            pttBtn.textContent = '🔴 正在说话...';
+            pttBtn.style.background = 'linear-gradient(135deg, #f44336 0%, #e91e63 100%)';
+            
+            logWebRTC('🎤 Microphone enabled (PTT pressed)');
+        }
+
+        // Stop PTT (disable microphone)
+        function stopPTT() {
+            if (!localStream || !isPTTActive) return;
+            
+            isPTTActive = false;
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = false;
+            });
+            
+            const pttBtn = document.getElementById('pttBtn');
+            pttBtn.textContent = '🎤 按住说话';
+            pttBtn.style.background = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+            
+            logWebRTC('🔇 Microphone disabled (PTT released)');
+        }
+
+        // Mute/Unmute
+        function toggleMute() {
+            if (!localStream) return;
+            
+            isMuted = !isMuted;
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = !isMuted;
+            });
+
+            const muteBtn = document.getElementById('muteBtn');
+            muteBtn.textContent = isMuted ? '🔊 Unmute' : '🔇 Mute';
+            logWebRTC(isMuted ? '🔇 Muted' : '🔊 Unmuted');
+        }
+
+        // End call
+        async function endCall() {
+            logWebRTC('📞 Ending call...');
+
+            const callId = document.getElementById('callId').value;
+            const testMode = document.getElementById('testMode').checked;
+
+            // Notify server to terminate call first
+            if (callId) {
+                try {
+                    const serverUrl = document.getElementById('serverUrl').value;
+                    const endpoint = testMode ? '/wati/test/terminate-call' : '/wati/terminate-call';
+                    const modeLabel = testMode ? '🧪 [Test Mode]' : '🏢 [Production Mode]';
+
+                    logWebRTC(`${modeLabel} Notifying server to terminate call...`);
+                    logHTTP(`📤 Calling ${endpoint}: ${serverUrl}${endpoint}`);
+
+                    const terminateData = { callId: callId };
+                    
+                    // Production mode requires tenant ID
+                    if (!testMode) {
+                        const tenantId = document.getElementById('tenantId').value;
+                        if (tenantId) {
+                            terminateData.tenantId = tenantId;
+                        }
+                    }
+
+                    const response = await fetch(`${serverUrl}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(terminateData)
+                    });
+
+                    const responseText = await response.text();
+                    if (response.ok) {
+                        logWebRTC(`${modeLabel} ✅ Server terminated call`, 'success');
+                        logHTTP(`✅ Response: ${responseText}`, 'success');
+                    } else {
+                        logWebRTC(`${modeLabel} ⚠️ Server returned error: ${response.status}`, 'error');
+                        logHTTP(`⚠️ Error: ${responseText}`, 'error');
+                    }
+                } catch (error) {
+                    logWebRTC(`⚠️ Failed to notify server: ${error.message}`, 'error');
+                    logHTTP(`⚠️ Error: ${error.message}`, 'error');
+                }
+            }
+
+            // Stop conversation message polling
+            stopConversationPolling();
+
+            // Close local WebRTC connection
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+                logWebRTC('🔌 Local PeerConnection closed');
+            }
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                logWebRTC('🎤 Microphone released');
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+                analyser = null;
+                logWebRTC('🔊 Audio context closed');
+            }
+
+            if (remoteAudioContext) {
+                remoteAudioContext.close();
+                remoteAudioContext = null;
+                remoteAnalyser = null;
+                logWebRTC('🔊 Remote audio context closed');
+            }
+
+            updateConnectionState('closed');
+            document.getElementById('volumeBar').style.width = '0%';
+            document.getElementById('remoteVolumeBar').style.width = '0%';
+            document.getElementById('audioStatus').textContent = 'Waiting for audio...';
+            document.getElementById('audioStatus').style.color = '#666';
+            document.getElementById('startCallBtn').disabled = false;
+            document.getElementById('endCallBtn').disabled = true;
+            document.getElementById('pttBtn').disabled = true;
+            document.getElementById('pttBtn').style.display = 'none';
+            isPTTActive = false;
+            
+            logWebRTC('✅ Call completely ended', 'success');
+            
+            // Note: Conversation history preserved, can be manually cleared
+            if (conversationMessages.length > 0) {
+                logWebRTC('💬 Conversation history preserved, click "Clear Conversation" to remove');
+            }
+        }
+
+        // HTTP API functions
+        async function sendWebhook() {
+            logHTTP('📤 Sending simple Webhook (no WebRTC)...');
+            // Implementation omitted, similar to original test_client.html
+        }
+
+        async function sendNewCall() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const tenantId = document.getElementById('tenantId').value;
+            const callId = document.getElementById('callId').value;
+
+            if (!tenantId || !callId) {
+                alert('Please fill in Tenant ID and Call ID');
+                return;
+            }
+
+            // Create a simple SDP offer
+            const simpleSDP = `v=0
+o=- ${Date.now()} 2 IN IP4 127.0.0.1
+s=WhatsApp Call Test
+t=0 0
+a=group:BUNDLE 0
+m=audio 9 UDP/TLS/RTP/SAVPF 111
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:test
+a=ice-pwd:testpassword123456
+a=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
+a=setup:actpass
+a=mid:0
+a=sendrecv
+a=rtcp-mux
+a=rtpmap:111 opus/48000/2`;
+
+            const newCallData = {
+                tenantId: tenantId,
+                callId: callId,
+                sdp: simpleSDP
+            };
+
+            logHTTP(`📤 Sending New Call request: ${serverUrl}/wati/new-call`);
+            logHTTP(`📦 Request data:\n${JSON.stringify({...newCallData, sdp: 'SDP content omitted...'}, null, 2)}`);
+
+            try {
+                const response = await fetch(`${serverUrl}/wati/new-call`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newCallData)
+                });
+
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (e) {
+                    responseData = responseText;
+                }
+
+                if (response.ok) {
+                    logHTTP(`✅ Response ${response.status}:\n${JSON.stringify(responseData, null, 2)}`, 'success');
+                } else {
+                    logHTTP(`❌ Error ${response.status}:\n${JSON.stringify(responseData, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                logHTTP(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function terminateCall() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const tenantId = document.getElementById('tenantId').value;
+            const callId = document.getElementById('callId').value;
+
+            if (!tenantId || !callId) {
+                alert('Please fill in Tenant ID and Call ID');
+                return;
+            }
+
+            logHTTP(`📤 Terminating call: ${callId}`);
+
+            const terminateData = {
+                tenantId: tenantId,
+                callId: callId
+            };
+
+            try {
+                const response = await fetch(`${serverUrl}/wati/terminate-call`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(terminateData)
+                });
+
+                const responseText = await response.text();
+                logHTTP(`📥 Response: ${response.status} - ${responseText}`, response.ok ? 'success' : 'error');
+            } catch (error) {
+                logHTTP(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getStatus() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            logHTTP('📊 Getting service status...');
+
+            try {
+                const response = await fetch(`${serverUrl}/wati/status`);
+                const data = await response.json();
+                logHTTP(`📥 Status:\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                logHTTP(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkHealth() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            logHTTP('❤️ Health check...');
+
+            try {
+                const response = await fetch(`${serverUrl}/wati/health`);
+                const data = await response.json();
+                logHTTP(`✅ Health status: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                logHTTP(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Update test mode UI
+        function updateTestModeUI() {
+            const testMode = document.getElementById('testMode').checked;
+            const label = document.getElementById('testModeLabel');
+            const tenantRequired = document.getElementById('tenantRequired');
+            
+            if (testMode) {
+                label.textContent = t('enabled');
+                label.style.color = '#667eea';
+                tenantRequired.textContent = t('testModeOptional');
+                tenantRequired.style.color = '#999';
+            } else {
+                label.textContent = t('disabled');
+                label.style.color = '#f44336';
+                tenantRequired.textContent = t('productionModeRequired');
+                tenantRequired.style.color = '#f44336';
+            }
+            
+            logWebRTC(`🔄 ${t('switchTo')}${testMode ? t('testMode') : t('productionMode')}`);
+            logHTTP(`🔄 ${t('currentMode')}: ${testMode ? t('testMode') : t('productionMode')}`);
+        }
+
+        // Update PTT mode UI
+        function updatePTTModeUI() {
+            const pttMode = document.getElementById('pttMode').checked;
+            if (pttMode) {
+                logWebRTC('🎤 PTT mode enabled: Hold button to talk, release to stop sending');
+            } else {
+                logWebRTC('🎙️ Continuous mode enabled: Continuously send audio stream');
+            }
+        }
+
+        // Update connection strategy info display
+        function updateConnectionStrategyInfo() {
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const infoText = document.getElementById('iceStrategyText');
+            
+            if (!isLocal) {
+                infoText.innerHTML = `
+                    ☁️ <strong>${t('cloudEnv')}</strong><br>
+                    🔄 ${t('autoNegotiation')}<br>
+                    🎯 ${t('intelligentRouting')}<br>
+                    📊 ${t('expectedLatency')}：10-250ms
+                `;
+                infoText.style.color = '#2196F3';
+            } else {
+                infoText.innerHTML = `
+                    🏠 <strong>${t('localEnv')}</strong><br>
+                    ⚡ ${t('stunDirect')}<br>
+                    💨 ${t('lowestLatency')}<br>
+                    📊 ${t('expectedLatency')}：10-50ms
+                `;
+                infoText.style.color = '#2e7d32';
+            }
+        }
+
+        // Display actual connection type used
+        async function displayActualConnectionType() {
+            if (!peerConnection) return;
+            
+            try {
+                const stats = await peerConnection.getStats();
+                let selectedPair = null;
+                
+                // 查找成功的候选者对
+                stats.forEach(report => {
+                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        selectedPair = report;
+                    }
+                });
+                
+                if (selectedPair) {
+                    // 获取本地和远程候选者详情
+                    let localCandidate = null;
+                    let remoteCandidate = null;
+                    
+                    stats.forEach(report => {
+                        if (report.type === 'local-candidate' && report.id === selectedPair.localCandidateId) {
+                            localCandidate = report;
+                        }
+                        if (report.type === 'remote-candidate' && report.id === selectedPair.remoteCandidateId) {
+                            remoteCandidate = report;
+                        }
+                    });
+                    
+                    if (localCandidate && remoteCandidate) {
+                        const localType = localCandidate.candidateType || 'unknown';
+                        const remoteType = remoteCandidate.candidateType || 'unknown';
+                        const rtt = selectedPair.currentRoundTripTime ? 
+                            (selectedPair.currentRoundTripTime * 1000).toFixed(0) : 'N/A';
+                        
+                        // 根据连接类型显示不同信息
+                        let connectionInfo = '';
+                        let emoji = '';
+                        
+                        if (localType === 'host' && remoteType === 'host') {
+                            emoji = '🚀';
+                            connectionInfo = `${t('directConnection')} (Host ↔ Host) - ${t('bestPerformance')}`;
+                        } else if (localType === 'srflx' || remoteType === 'srflx') {
+                            emoji = '⚡';
+                            connectionInfo = `${t('stunPenetration')} (${localType} ↔ ${remoteType})`;
+                        } else if (localType === 'relay' || remoteType === 'relay') {
+                            emoji = '🔄';
+                            const relayInfo = (localType === 'relay' && remoteType === 'relay') 
+                                ? 'TURN RELAY ONLY' 
+                                : `TURN Relay (${localType} ↔ ${remoteType})`;
+                            connectionInfo = `${t('turnRelayMode')} (${relayInfo})`;
+                        } else {
+                            emoji = '🔗';
+                            connectionInfo = `${localType} ↔ ${remoteType}`;
+                        }
+                        
+                        logWebRTC(`${emoji} ${tLog('log.actualConnectionType')}: ${connectionInfo}`, 'success');
+                        logWebRTC(`${tLog('log.roundTripTime')}: ${rtt}ms`, 'info');
+                        logWebRTC(`${tLog('log.local')}: ${localCandidate.address || localCandidate.ip}:${localCandidate.port}`, 'info');
+                        logWebRTC(`${tLog('log.remote')}: ${remoteCandidate.address || remoteCandidate.ip}:${remoteCandidate.port}`, 'info');
+                        
+                        // Update strategy info to display actual results
+                        const infoText = document.getElementById('iceStrategyText');
+                        if (infoText) {
+                            const currentHTML = infoText.innerHTML;
+                            infoText.innerHTML = currentHTML + `<br><br><strong style="color: #1976d2;">✅ ${t('actualConnection')}:</strong> ${connectionInfo}<br>📊 RTT: ${rtt}ms`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to get connection stats:', error);
+            }
+        }
+
+        // 更新速率限制显示
+        function updateRateLimitDisplay(rateType, remaining, limit) {
+            const barId = rateType + 'Bar';
+            const textId = rateType + 'Text';
+            
+            const bar = document.getElementById(barId);
+            const text = document.getElementById(textId);
+            
+            if (!bar || !text) return;
+            
+            // 计算使用百分比
+            const percentage = limit > 0 ? (remaining / limit) * 100 : 0;
+            const used = limit - remaining;
+            
+            // 更新进度条
+            bar.style.width = percentage + '%';
+            
+            // 根据剩余量改变颜色
+            bar.className = 'rate-bar';
+            if (percentage < 20) {
+                bar.classList.add('danger');
+            } else if (percentage < 50) {
+                bar.classList.add('warning');
+            }
+            
+            // 更新文本
+            text.textContent = `${remaining.toLocaleString()} / ${limit.toLocaleString()} (${tLog('log.used')} ${used.toLocaleString()})`;
+            
+            // 如果接近限制，显示警告
+            if (percentage < 10 && limit > 0) {
+                logWebRTC(`⚠️ ${rateType} ${tLog('log.rateLimitWarning')}: ${percentage.toFixed(1)}%`, 'error');
+            }
+        }
+
+        // Handle rate_limits.updated event
+        function handleRateLimitsUpdate(rateLimitsData) {
+            logWebRTC('⚡ Received rate limit update', 'info');
+            
+            // Update each limit type
+            if (rateLimitsData) {
+                for (const [key, value] of Object.entries(rateLimitsData)) {
+                    if (value && typeof value === 'object') {
+                        const remaining = value.remaining || 0;
+                        const limit = value.limit || 0;
+                        
+                        // 映射 API 字段名到 UI 元素 ID
+                        let rateType = key;
+                        if (key === 'input_tokens') rateType = 'inputTokens';
+                        if (key === 'output_tokens') rateType = 'outputTokens';
+                        
+                        // 更新显示
+                        updateRateLimitDisplay(rateType, remaining, limit);
+                        
+                        // 记录日志
+                        console.log(`Rate limit [${key}]: ${remaining}/${limit}`);
+                    }
+                }
+                
+                // 更新时间戳
+                const now = new Date().toLocaleTimeString('zh-CN');
+                document.getElementById('rateLimitUpdate').textContent = `最后更新: ${now}`;
+            }
+        }
+
+        // 模拟接收速率限制更新（用于测试）
+        function simulateRateLimitUpdate() {
+            const mockData = {
+                requests: {
+                    name: "requests",
+                    limit: 100,
+                    remaining: Math.floor(Math.random() * 100),
+                    reset_seconds: 60
+                },
+                tokens: {
+                    name: "tokens",
+                    limit: 50000,
+                    remaining: Math.floor(Math.random() * 50000),
+                    reset_seconds: 60
+                },
+                input_tokens: {
+                    name: "input_tokens_details",
+                    limit: 25000,
+                    remaining: Math.floor(Math.random() * 25000),
+                    reset_seconds: 60
+                },
+                output_tokens: {
+                    name: "output_tokens_details",
+                    limit: 25000,
+                    remaining: Math.floor(Math.random() * 25000),
+                    reset_seconds: 60
+                }
+            };
+            
+            handleRateLimitsUpdate(mockData);
+            logWebRTC('🧪 Generated simulated rate limit data');
+        }
+
+        // 添加消息到对话历史
+        function addConversationMessage(role, content) {
+            if (!content || content.trim() === '') return;
+            
+            const timestamp = new Date();
+            const message = {
+                role: role,
+                content: content.trim(),
+                timestamp: timestamp
+            };
+            
+            conversationMessages.push(message);
+            
+            // 更新计数
+            if (role === 'user') {
+                userMessageCount++;
+            } else if (role === 'assistant') {
+                assistantMessageCount++;
+            }
+            
+            // 渲染消息
+            renderConversationMessage(message);
+            
+            // 更新统计
+            updateConversationStats();
+            
+            // 自动滚动到底部
+            scrollToBottom();
+        }
+
+        // 渲染单条消息
+        function renderConversationMessage(message) {
+            const conversationBox = document.getElementById('conversationHistory');
+            
+            // 移除空状态提示
+            const emptyState = conversationBox.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            // 创建消息元素
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${message.role}`;
+            
+            // 格式化时间
+            const timeStr = message.timestamp.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // 角色图标和名称
+            const roleIcon = message.role === 'user' ? '👤' : '🤖';
+            const roleName = message.role === 'user' ? '用户' : 'AI 助手';
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-icon">${roleIcon}</span>
+                    <span>${roleName}</span>
+                    <span class="message-time">${timeStr}</span>
+                </div>
+                <div class="message-content">${escapeHtml(message.content)}</div>
+            `;
+            
+            conversationBox.appendChild(messageDiv);
+        }
+
+        // HTML 转义（防止 XSS）
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 更新对话统计
+        function updateConversationStats() {
+            const statsElement = document.getElementById('conversationStats');
+            if (currentLang === 'zh') {
+                statsElement.innerHTML = `<span>用户: ${userMessageCount} 条</span> | <span>AI: ${assistantMessageCount} 条</span>`;
+            } else {
+                statsElement.innerHTML = `<span>User: ${userMessageCount} messages</span> | <span>AI: ${assistantMessageCount} messages</span>`;
+            }
+        }
+
+        // 自动滚动到底部
+        function scrollToBottom() {
+            const conversationBox = document.getElementById('conversationHistory');
+            conversationBox.scrollTop = conversationBox.scrollHeight;
+        }
+
+        // Clear conversation history
+        function clearConversation() {
+            conversationMessages = [];
+            userMessageCount = 0;
+            assistantMessageCount = 0;
+            lastMessageCount = 0; // Reset API count
+            
+            const conversationBox = document.getElementById('conversationHistory');
+            conversationBox.innerHTML = `<div class="empty-state">${tLog('log.conversationCleared')}</div>`;
+            
+            updateConversationStats();
+            logWebRTC(`🗑️ ${tLog('log.conversationCleared')}`);
+        }
+
+        // ========== API Polling for Conversation Messages ==========
+        let conversationPollingInterval = null;
+        let lastMessageCount = 0;
+        let currentConversationId = null;
+
+        // Start polling conversation messages
+        function startConversationPolling(conversationId) {
+            if (!conversationId) {
+                logHTTP('⚠️ Cannot start polling: conversationId is empty');
+                console.error('[Conversation] Cannot start polling: conversationId is empty');
+                return;
+            }
+
+            // Clear existing polling
+            if (conversationPollingInterval) {
+                clearInterval(conversationPollingInterval);
+                console.log('[Conversation] Cleared existing polling interval');
+            }
+
+            // Reset state (important! Avoid pulling old conversation data)
+            currentConversationId = conversationId;
+            lastMessageCount = 0;
+            logHTTP(`🔄 Starting conversation message polling (conversation_id: ${conversationId})`);
+            console.log(`[Conversation] Starting polling for conversation: ${conversationId}, reset lastMessageCount to 0`);
+
+            // Execute immediately once
+            console.log('[Conversation] Executing initial fetch');
+            fetchConversationMessages();
+
+            // Poll every 2 seconds
+            conversationPollingInterval = setInterval(() => {
+                console.log('[Conversation] Polling tick...');
+                fetchConversationMessages();
+            }, 2000);
+            console.log('[Conversation] Polling interval set up (every 2 seconds)');
+        }
+
+        // Stop polling
+        function stopConversationPolling() {
+            if (conversationPollingInterval) {
+                clearInterval(conversationPollingInterval);
+                conversationPollingInterval = null;
+                logHTTP('⏸️ Stopped conversation message polling');
+            }
+        }
+
+        // Fetch conversation messages from API
+        async function fetchConversationMessages() {
+            if (!currentConversationId) {
+                console.log('[Conversation] No conversation ID, skipping fetch');
+                return;
+            }
+
+            try {
+                const serverUrl = document.getElementById('serverUrl').value;
+                const url = `${serverUrl}/api/voice-conversations/${currentConversationId}/messages`;
+                console.log(`[Conversation] Fetching messages from: ${url}`);
+                
+                const response = await apiClient.get(url);
+                
+                if (response.status === 404) {
+                    // Conversation 尚未创建，这是正常的
+                    console.log('[Conversation] 404 - Conversation not yet created (normal)');
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const messages = data.messages || [];
+                console.log(`[Conversation] Received response:`, data);
+                console.log(`[Conversation] Messages count: ${messages.length} (last count: ${lastMessageCount})`);
+                
+                // Only process new messages
+                if (messages && messages.length > lastMessageCount) {
+                    const newMessages = messages.slice(lastMessageCount);
+                    console.log(`[Conversation] Adding ${newMessages.length} new messages`);
+                    logHTTP(`📨 Received ${newMessages.length} new message(s)`);
+                    
+                    newMessages.forEach(msg => {
+                        console.log('[Conversation] Message:', msg);
+                        addConversationMessageFromAPI(msg);
+                    });
+                    lastMessageCount = messages.length;
+                }
+            } catch (error) {
+                // Silent failure, doesn't affect the call
+                console.error('[Conversation] Failed to fetch messages:', error);
+            }
+        }
+
+        // Add message from API to display
+        function addConversationMessageFromAPI(apiMessage) {
+            console.log('[Conversation] Adding message from API:', apiMessage);
+            
+            const timestamp = apiMessage.created_at ? new Date(apiMessage.created_at) : new Date();
+            const message = {
+                role: apiMessage.role,
+                content: apiMessage.content,
+                timestamp: timestamp
+            };
+
+            conversationMessages.push(message);
+            console.log('[Conversation] Message added to array, total:', conversationMessages.length);
+
+            // 更新计数
+            if (apiMessage.role === 'user') {
+                userMessageCount++;
+            } else if (apiMessage.role === 'assistant') {
+                assistantMessageCount++;
+            }
+
+            // 渲染消息
+            console.log('[Conversation] Rendering message...');
+            renderConversationMessage(message);
+
+            // 更新统计
+            updateConversationStats();
+
+            // 自动滚动到底部
+            scrollToBottom();
+            console.log('[Conversation] Message rendering complete');
+        }
+
+        // Note: Conversation history is obtained through WebRTC real-time API
+        // Backend stores conversation messages to database, frontend polls /api/voice-conversations/{id}/messages to retrieve
+
+        // Export conversation history
+        function exportConversation() {
+            if (conversationMessages.length === 0) {
+                alert('No conversation records to export');
+                return;
+            }
+            
+            // Generate text content
+            let content = '='.repeat(50) + '\n';
+            content += 'Conversation History Export\n';
+            content += `Export Time: ${new Date().toLocaleString('en-US')}\n`;
+            content += `Call ID: ${document.getElementById('callId').value}\n`;
+            content += `Total Messages: ${conversationMessages.length}\n`;
+            content += '='.repeat(50) + '\n\n';
+            
+            conversationMessages.forEach((msg, index) => {
+                const role = msg.role === 'user' ? '👤 User' : '🤖 AI Assistant';
+                const time = msg.timestamp.toLocaleTimeString('en-US');
+                content += `[${index + 1}] ${role} (${time})\n`;
+                content += `${msg.content}\n\n`;
+                content += '-'.repeat(50) + '\n\n';
+            });
+            
+            // Create download
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `conversation_${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            logWebRTC('📥 Conversation history exported as text file');
+            
+            // Also export JSON format
+            exportConversationJSON();
+        }
+
+        // Export JSON format
+        function exportConversationJSON() {
+            const exportData = {
+                exportTime: new Date().toISOString(),
+                callId: document.getElementById('callId').value,
+                tenantId: document.getElementById('tenantId').value,
+                totalMessages: conversationMessages.length,
+                userMessages: userMessageCount,
+                assistantMessages: assistantMessageCount,
+                messages: conversationMessages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                    timestamp: msg.timestamp.toISOString()
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `conversation_${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            logWebRTC('📥 Conversation history exported as JSON');
+        }
+
+        // 加载 Tenants
+        async function loadTenants() {
+            try {
+                logHTTP(tLog('log.loadingTenants'));
+                const response = await apiClient.get('/api/tenants?include_disabled=false');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const tenants = await response.json();
+                
+                const tenantSelect = document.getElementById('tenantId');
+                tenantSelect.innerHTML = '<option value="">-- Select Tenant --</option>';
+                
+                tenants.forEach(tenant => {
+                    const option = document.createElement('option');
+                    // Use tenant_id (business ID) instead of id (UUID)
+                    option.value = tenant.tenant_id;
+                    option.textContent = `${tenant.tenant_name || tenant.tenant_id} (${tenant.tenant_id})`;
+                    tenantSelect.appendChild(option);
+                });
+                
+                logHTTP(`${tLog('log.loadedTenants')} ${tenants.length} ${tLog('log.tenants')}`);
+            } catch (error) {
+                logHTTP(`${tLog('log.loadTenantsError')}: ${error.message}`);
+                console.error('Error loading tenants:', error);
+            }
+        }
+        
+        // 加载 Agents (基于选中的 Tenant)
+        async function loadAgents(tenantId) {
+            const agentSelect = document.getElementById('agentId');
+            
+            if (!tenantId) {
+                agentSelect.innerHTML = `<option value="">${t('selectTenantFirst')}</option>`;
+                return;
+            }
+            
+            try {
+                const url = `/api/agents?tenant_id=${encodeURIComponent(tenantId)}&include_disabled=false`;
+                logHTTP(`${tLog('log.loadingAgents')} (Tenant: "${tenantId}")`);
+                logHTTP(`📡 URL: ${url}`);
+                
+                const response = await apiClient.get(url);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    logHTTP(`❌ HTTP ${response.status}: ${errorText}`);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const agents = await response.json();
+                console.log('Loaded agents:', agents); // 调试日志
+                
+                agentSelect.innerHTML = `<option value="">${tLog('log.selectAgentOptional')}</option>`;
+                
+                if (agents && agents.length > 0) {
+                    agents.forEach(agent => {
+                        const option = document.createElement('option');
+                        option.value = agent.id;
+                        option.textContent = `${agent.agent_name || agent.id}`;
+                        agentSelect.appendChild(option);
+                    });
+                    logHTTP(`${tLog('log.loadedAgents')} ${agents.length} ${tLog('log.agents')}`);
+                } else {
+                    agentSelect.innerHTML += `<option value="" disabled>${tLog('log.noAgentsAvailable')}</option>`;
+                    logHTTP(`⚠️ Tenant "${tenantId}" ${tLog('log.tenantHasNoAgents')}`);
+                }
+            } catch (error) {
+                logHTTP(`${tLog('log.loadAgentsError')}: ${error.message}`);
+                console.error('Error loading agents:', error);
+                agentSelect.innerHTML = `<option value="">${tLog('log.loadAgentsError')}</option>`;
+            }
+        }
+        
+        // Diagnose connection issues
+        async function diagnoseConnection() {
+            logWebRTC('🔬 Starting connection diagnosis...', 'info');
+            
+            if (!peerConnection) {
+                logWebRTC('❌ PeerConnection does not exist', 'error');
+                return;
+            }
+            
+            // Get connection statistics
+            try {
+                const stats = await peerConnection.getStats();
+                let hasRemoteCandidate = false;
+                let hasLocalCandidate = false;
+                let candidatePairChecked = false;
+                
+                stats.forEach(report => {
+                    if (report.type === 'local-candidate') {
+                        hasLocalCandidate = true;
+                        logWebRTC(`   📍 Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`, 'info');
+                    }
+                    if (report.type === 'remote-candidate') {
+                        hasRemoteCandidate = true;
+                        logWebRTC(`   📍 Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`, 'info');
+                    }
+                    if (report.type === 'candidate-pair') {
+                        candidatePairChecked = true;
+                        logWebRTC(`   🔗 Candidate pair: ${report.state} (nominated: ${report.nominated})`, 'info');
+                    }
+                });
+                
+                if (!hasRemoteCandidate) {
+                    logWebRTC('❌ No remote candidate received - server may not have returned correct SDP', 'error');
+                }
+                
+                if (!hasLocalCandidate) {
+                    logWebRTC('❌ No local candidate - ICE gathering failed', 'error');
+                }
+                
+                if (!candidatePairChecked) {
+                    logWebRTC('❌ No candidate pair - ICE negotiation not started', 'error');
+                }
+                
+            } catch (error) {
+                logWebRTC(`❌ Diagnosis failed: ${error.message}`, 'error');
+            }
+            
+            // Check server connection
+            const serverUrl = document.getElementById('serverUrl').value;
+            logWebRTC(`🔍 Testing server connection: ${serverUrl}`, 'info');
+            
+            try {
+                const response = await fetch(`${serverUrl}/wati/health`, { method: 'GET' });
+                if (response.ok) {
+                    logWebRTC(`✅ Server reachable (HTTP ${response.status})`, 'success');
+                } else {
+                    logWebRTC(`⚠️ Server responded abnormally (HTTP ${response.status})`, 'warning');
+                }
+            } catch (error) {
+                logWebRTC(`❌ Cannot connect to server: ${error.message}`, 'error');
+                logWebRTC('   Please check server address and network connection', 'error');
+            }
+        }
+
+        // Load corresponding Agents when Tenant selection changes
+        function onTenantChange() {
+            const tenantId = document.getElementById('tenantId').value;
+            loadAgents(tenantId);
+        }
+
+        // Auto-set server address
+        function initializeServerUrl() {
+            const serverUrlInput = document.getElementById('serverUrl');
+            
+            // Always auto-set to current access address (unified logic)
+            const protocol = window.location.protocol; // http: or https:
+            const hostname = window.location.hostname;  // Domain or IP
+            const port = window.location.port;          // Port
+            
+            let detectedUrl = '';
+            
+            // Build server address
+            if (port) {
+                // Has port number (including 8082 or other custom ports)
+                detectedUrl = `${protocol}//${hostname}:${port}`;
+            } else {
+                // No port number (using standard 80/443)
+                detectedUrl = `${protocol}//${hostname}`;
+            }
+            
+            // Set detected address
+            serverUrlInput.value = detectedUrl;
+            
+            // Display detection information
+            const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+            const envType = isLocal ? t('localEnv') : t('cloudEnv');
+            const protocolType = protocol === 'https:' ? 'HTTPS' : 'HTTP';
+            
+            logWebRTC(`${tLog('log.autoServerDetect')}: ${detectedUrl}`, 'info');
+            logWebRTC(`${tLog('log.environment')}: ${envType} | ${tLog('log.protocol')}: ${protocolType}`, 'info');
+            
+            // Notify user
+            if (protocol === 'https:') {
+                logWebRTC('✅ HTTPS connection - more lenient audio playback policy', 'success');
+            } else {
+                logWebRTC('⚠️ HTTP connection - may require user interaction to play audio', 'warning');
+                if (!isLocal) {
+                    logWebRTC('💡 Suggestion: Production environment should use HTTPS', 'warning');
+                }
+            }
+            
+            // Notify user can manually modify
+            logWebRTC('💡 Tip: To connect to other servers, please manually modify the server address', 'info');
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            // Auto-set server address
+            initializeServerUrl();
+            
+            generateCallId();
+            logWebRTC(tLog('log.clientReady'));
+            logHTTP(tLog('log.httpClientReady'));
+            updateConnectionState('new');
+            
+            // Initialize audio context to unlock audio playback (solve browser autoplay restriction)
+            initializeAudioContext();
+            
+            // Display connection strategy for current environment
+            updateConnectionStrategyInfo();
+            
+            // Set up test mode toggle event listener
+            document.getElementById('testMode').addEventListener('change', updateTestModeUI);
+            updateTestModeUI(); // Initialize UI
+            
+            // Set up PTT mode toggle event listener
+            document.getElementById('pttMode').addEventListener('change', updatePTTModeUI);
+            
+            // Set up Tenant selection change listener
+            document.getElementById('tenantId').addEventListener('change', onTenantChange);
+            
+            // Initialize rate limit display
+            initializeRateLimitDisplay();
+            
+            // Load Tenants list
+            loadTenants();
+        };
+
+        // Initialize rate limit display
+        function initializeRateLimitDisplay() {
+            // Set initial values to 0
+            updateRateLimitDisplay('requests', 0, 100);
+            updateRateLimitDisplay('tokens', 0, 50000);
+            updateRateLimitDisplay('inputTokens', 0, 25000);
+            updateRateLimitDisplay('outputTokens', 0, 25000);
+            
+            logWebRTC('⚡ Rate limit monitoring initialized');
+        }
+
+        // Cleanup on page close
+        window.onbeforeunload = function() {
+            if (peerConnection) {
+                endCall();
+            }
+        };
+    </script>
+    
+    <!-- API Client with Key Validation -->
+    <script src="/static/js/api_client.js"></script>
+</body>
+</html>
+

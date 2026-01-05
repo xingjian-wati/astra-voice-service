@@ -1,0 +1,53 @@
+# LiveKit Server Configuration
+# This is a minimal configuration for development/testing
+
+# Server ports
+port: 7880
+rtc:
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: false
+
+# Redis for multi-instance coordination (optional, comment out for single instance)
+# redis:
+#   address: localhost:6379
+
+# Room settings
+room:
+  auto_create: true
+  empty_timeout: 300  # seconds (5 minutes)
+  max_participants: 100
+
+# Audio/Video codecs
+codecs:
+  - mime: audio/opus
+  - mime: video/h264
+  - mime: video/vp8
+  - mime: video/vp9
+
+
+
+# Logging
+logging:
+  level: info
+  # level: debug  # Uncomment for verbose logging
+
+# Keys - API key and secret for authentication
+# Format: API_KEY: API_SECRET
+keys:
+  devkey: devsecret
+  your-api-key: your-api-secret
+
+# TURN server (optional, for NAT traversal)
+# turn:
+#   enabled: true
+#   domain: turn.example.com
+#   tls_port: 5349
+#   udp_port: 3478
+
+# WebHook (optional, for server events)
+# webhook:
+#   urls:
+#     - http://localhost:8082/livekit/webhook
+#   api_key: webhook-api-key
+
