@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wati Webhook 测试客户端</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3941 0%, #f15e64 100%);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(235, 57, 65, 0.4);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #a8a8a8 0%, #7a7a7a 100%);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(122, 122, 122, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .response-area {
+            margin-top: 20px;
+        }
+
+        .response-box {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .response-box.success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .response-box.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.online {
+            background: #28a745;
+            box-shadow: 0 0 10px #28a745;
+        }
+
+        .status-indicator.offline {
+            background: #dc3545;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔔 Wati Webhook 测试客户端</h1>
+            <p>用于测试 WhatsApp Call Gateway 的各种 Wati webhook 端点</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Configuration Card -->
+            <div class="card">
+                <h2>⚙️ 配置</h2>
+                <div class="form-group">
+                    <label for="serverUrl">服务器地址</label>
+                    <input type="text" id="serverUrl" value="http://localhost:8082" placeholder="http://localhost:8082">
+                </div>
+                <div class="form-group">
+                    <label for="tenantId">Tenant ID</label>
+                    <input type="text" id="tenantId" placeholder="your-tenant-id">
+                </div>
+                <div class="form-group">
+                    <label for="callId">Call ID</label>
+                    <input type="text" id="callId" placeholder="test-call-" value="">
+                </div>
+                <div class="form-group">
+                    <label for="businessNumber">Business Number (可选)</label>
+                    <input type="text" id="businessNumber" placeholder="16206469712">
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="generateCallId()">🎲 生成 Call ID</button>
+                    <button class="btn-info" onclick="checkHealth()">❤️ 健康检查</button>
+                </div>
+            </div>
+
+            <!-- Webhook Test Card -->
+            <div class="card">
+                <h2>📞 Webhook 测试</h2>
+                <div class="info-box">
+                    <h3>测试说明</h3>
+                    <p>发送模拟的 Wati webhook 事件到服务器，触发 handleWatiWebhook 逻辑处理流程。</p>
+                </div>
+                <div class="form-group">
+                    <label for="contactNumber">联系电话</label>
+                    <input type="text" id="contactNumber" placeholder="+1234567890" value="+1234567890">
+                </div>
+                <div class="form-group">
+                    <label for="contactName">联系人名称</label>
+                    <input type="text" id="contactName" placeholder="Test User" value="Test User">
+                </div>
+                <div class="form-group">
+                    <label for="voiceLanguage">语言</label>
+                    <select id="voiceLanguage">
+                        <option value="en">English (en)</option>
+                        <option value="zh">中文 (zh)</option>
+                        <option value="es">Español (es)</option>
+                        <option value="fr">Français (fr)</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button class="btn-success" onclick="sendWebhook()">📲 发送 Webhook</button>
+                    <button class="btn-primary" onclick="sendNewCall()">📞 新建通话</button>
+                    <button class="btn-danger" onclick="terminateCall()">🛑 终止通话</button>
+                </div>
+            </div>
+
+            <!-- SDP Test Card -->
+            <div class="card full-width">
+                <h2>🎵 SDP 测试</h2>
+                <div class="form-group">
+                    <label for="sdpOffer">SDP Offer (可选，留空将使用默认测试 SDP)</label>
+                    <textarea id="sdpOffer" placeholder="v=0
+o=- 1234567890 1234567890 IN IP4 0.0.0.0
+s=WhatsApp Call
+..."></textarea>
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="useDefaultSDP()">📋 使用默认 SDP</button>
+                    <button class="btn-secondary" onclick="clearSDP()">🗑️ 清空 SDP</button>
+                </div>
+            </div>
+
+            <!-- Response Card -->
+            <div class="card full-width">
+                <h2>📊 响应结果</h2>
+                <div class="response-area">
+                    <div id="responseBox" class="response-box">等待请求...</div>
+                </div>
+                <div class="button-group" style="margin-top: 15px;">
+                    <button class="btn-secondary" onclick="clearResponse()">🗑️ 清空响应</button>
+                    <button class="btn-info" onclick="getStatus()">📈 获取状态</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 默认的测试 SDP
+        const DEFAULT_SDP = `v=0
+o=- 1234567890123456 2 IN IP4 127.0.0.1
+s=WhatsApp Voice Call
+t=0 0
+a=group:BUNDLE 0
+a=msid-semantic: WMS *
+m=audio 9 UDP/TLS/RTP/SAVPF 111 103 104 9 0 8 106 105 13 110 112 113 126
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:testuser
+a=ice-pwd:testpassword1234567890
+a=ice-options:trickle
+a=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
+a=setup:actpass
+a=mid:0
+a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level
+a=sendrecv
+a=rtcp-mux
+a=rtpmap:111 opus/48000/2
+a=rtcp-fb:111 transport-cc
+a=fmtp:111 minptime=10;useinbandfec=1
+a=rtpmap:103 ISAC/16000
+a=rtpmap:104 ISAC/32000
+a=rtpmap:9 G722/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:8 PCMA/8000
+a=rtpmap:106 CN/32000
+a=rtpmap:105 CN/16000
+a=rtpmap:13 CN/8000
+a=rtpmap:110 telephone-event/48000
+a=rtpmap:112 telephone-event/32000
+a=rtpmap:113 telephone-event/16000
+a=rtpmap:126 telephone-event/8000
+a=ssrc:1234567890 cname:test-cname
+a=ssrc:1234567890 msid:test-stream test-audio-track
+a=ssrc:1234567890 mslabel:test-stream
+a=ssrc:1234567890 label:test-audio-track`;
+
+        // 生成随机 Call ID
+        function generateCallId() {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 8);
+            document.getElementById('callId').value = `test-call-${timestamp}-${random}`;
+            logToResponse(`✅ 已生成新的 Call ID: test-call-${timestamp}-${random}`);
+        }
+
+        // 使用默认 SDP
+        function useDefaultSDP() {
+            document.getElementById('sdpOffer').value = DEFAULT_SDP;
+            logToResponse('✅ 已加载默认测试 SDP');
+        }
+
+        // 清空 SDP
+        function clearSDP() {
+            document.getElementById('sdpOffer').value = '';
+            logToResponse('✅ 已清空 SDP');
+        }
+
+        // 清空响应
+        function clearResponse() {
+            document.getElementById('responseBox').textContent = '响应已清空';
+            document.getElementById('responseBox').className = 'response-box';
+        }
+
+        // 记录到响应区域
+        function logToResponse(message, isError = false) {
+            const responseBox = document.getElementById('responseBox');
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}\n\n`;
+            
+            if (responseBox.textContent === '等待请求...' || responseBox.textContent === '响应已清空') {
+                responseBox.textContent = logMessage;
+            } else {
+                responseBox.textContent += logMessage;
+            }
+            
+            responseBox.className = isError ? 'response-box error' : 'response-box success';
+            responseBox.scrollTop = responseBox.scrollHeight;
+        }
+
+        // 发送请求的通用函数
+        async function sendRequest(endpoint, method, body = null) {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const url = `${serverUrl}${endpoint}`;
+            
+            logToResponse(`📤 发送 ${method} 请求到: ${url}`);
+            
+            if (body) {
+                logToResponse(`📦 请求体:\n${JSON.stringify(body, null, 2)}`);
+            }
+
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(url, options);
+                const responseText = await response.text();
+                
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (e) {
+                    responseData = responseText;
+                }
+
+                logToResponse(`📥 响应状态: ${response.status} ${response.statusText}`);
+                
+                if (typeof responseData === 'object') {
+                    logToResponse(`📄 响应数据:\n${JSON.stringify(responseData, null, 2)}`);
+                } else {
+                    logToResponse(`📄 响应数据:\n${responseData}`);
+                }
+
+                return { success: response.ok, status: response.status, data: responseData };
+            } catch (error) {
+                logToResponse(`❌ 请求失败: ${error.message}`, true);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // 发送 Webhook
+        async function sendWebhook() {
+            const tenantId = document.getElementById('tenantId').value;
+            const callId = document.getElementById('callId').value;
+            const contactNumber = document.getElementById('contactNumber').value;
+            const contactName = document.getElementById('contactName').value;
+            const voiceLanguage = document.getElementById('voiceLanguage').value;
+            const businessNumber = document.getElementById('businessNumber').value;
+            
+            if (!tenantId || !callId) {
+                alert('请填写 Tenant ID 和 Call ID');
+                return;
+            }
+
+            const sdpOffer = document.getElementById('sdpOffer').value || DEFAULT_SDP;
+
+            const webhookData = {
+                tenantId: tenantId,
+                callId: callId,
+                businessNumber: businessNumber || undefined,
+                contact: {
+                    contactNumber: contactNumber,
+                    contactName: contactName
+                },
+                voiceLanguage: voiceLanguage,
+                sdp: sdpOffer,
+                timestamp: new Date().toISOString()
+            };
+
+            await sendRequest('/wati/webhook', 'POST', webhookData);
+        }
+
+        // 发送新建通话请求
+        async function sendNewCall() {
+            const tenantId = document.getElementById('tenantId').value;
+            const callId = document.getElementById('callId').value;
+            
+            if (!tenantId || !callId) {
+                alert('请填写 Tenant ID 和 Call ID');
+                return;
+            }
+
+            const sdpOffer = document.getElementById('sdpOffer').value || DEFAULT_SDP;
+
+            const newCallData = {
+                tenantId: tenantId,
+                callId: callId,
+                sdp: sdpOffer
+            };
+
+            await sendRequest('/wati/new-call', 'POST', newCallData);
+        }
+
+        // 终止通话
+        async function terminateCall() {
+            const tenantId = document.getElementById('tenantId').value;
+            const callId = document.getElementById('callId').value;
+            
+            if (!tenantId || !callId) {
+                alert('请填写 Tenant ID 和 Call ID');
+                return;
+            }
+
+            const terminateData = {
+                tenantId: tenantId,
+                callId: callId
+            };
+
+            await sendRequest('/wati/terminate-call', 'POST', terminateData);
+        }
+
+        // 健康检查
+        async function checkHealth() {
+            await sendRequest('/wati/health', 'GET');
+        }
+
+        // 获取状态
+        async function getStatus() {
+            await sendRequest('/wati/status', 'GET');
+        }
+
+        // 页面加载时生成初始 Call ID
+        window.onload = function() {
+            generateCallId();
+            logToResponse('✅ 测试客户端已就绪');
+            logToResponse('💡 提示：请先配置服务器地址和 Tenant ID，然后点击相应按钮进行测试');
+        };
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,74 @@
+# ==========================================
+# Multi-stage build for WhatsApp Call Service
+# ==========================================
+
+# Stage 1: Builder
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    git \
+    make \
+    ca-certificates
+
+# Configure git for private repositories
+ARG GITHUB_TOKEN
+ENV GOPRIVATE=github.com/ClareAI/*
+RUN if [ -n "$GITHUB_TOKEN" ]; then \
+        git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
+    fi
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+# Use -ldflags to reduce binary size
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags="-w -s -extldflags '-static'" \
+    -tags netgo \
+    -o whatsapp-voice-service \
+    ./cmd/whatsappcall/main.go
+
+# Stage 2: Runtime
+FROM alpine:3.18
+
+WORKDIR /app
+
+# Install runtime dependencies including ffmpeg
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    ffmpeg \
+    && addgroup -g 1000 appuser \
+    && adduser -D -u 1000 -G appuser appuser
+
+# Copy binary from builder
+COPY --from=builder --chown=appuser:appuser /app/whatsapp-voice-service .
+
+# Copy static files if needed
+COPY --from=builder --chown=appuser:appuser /app/static ./static
+
+# Set timezone (optional, can be overridden)
+ENV TZ=UTC
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8082/health || exit 1
+
+# Expose port
+EXPOSE 8082
+
+# Run the binary
+CMD ["./whatsapp-voice-service"]

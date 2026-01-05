@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可折叠配置区域示例</title>
+    <link rel="stylesheet" href="/static/css/agent_management.css">
+    <style>
+        body {
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Agent 配置区域 - 可折叠示例</h1>
+    <p style="color: #666; margin-bottom: 30px;">
+        这是4个主要配置区域的可折叠版本，包含详细说明和字段关联关系。
+    </p>
+
+    <!-- ============================================
+         1. Prompt Configuration Section
+         ============================================ -->
+    <div class="config-section">
+        <div class="config-header" onclick="toggleConfigSection(this)">
+            <div class="config-header-left">
+                <div class="config-icon">💬</div>
+                <div class="config-title-group">
+                    <h3 class="config-title">Prompt Configuration</h3>
+                    <p class="config-subtitle">AI conversation prompts and instructions</p>
+                </div>
+            </div>
+            <div>
+                <span class="config-badge">
+                    <span>🔑</span>
+                    <span>Core</span>
+                </span>
+                <span class="config-toggle">▼</span>
+            </div>
+        </div>
+        
+        <div class="config-body">
+            <!-- Help Box -->
+            <div class="config-help-box">
+                <div class="config-help-title">
+                    <span>📚</span>
+                    <span>配置说明</span>
+                </div>
+                <div class="config-help-content">
+                    <p><strong>Prompt Configuration</strong> 控制 AI 如何与用户对话。包含以下关键字段：</p>
+                    <ul>
+                        <li><code>greeting_template</code> - 初始问候语，用户接通电话时的第一句话</li>
+                        <li><code>realtime_template</code> - 实时对话指令，控制整个通话过程中的 AI 行为</li>
+                        <li><code>system_instructions</code> - 系统级指令，定义 AI 的角色和行为准则</li>
+                        <li><code>conversation_flow</code> - 对话流程步骤，指导 AI 按顺序引导对话</li>
+                        <li><code>example_dialogues</code> - 示例对话，帮助 AI 学习期望的对话风格</li>
+                        <li><code>language_instructions</code> - 多语言指令，针对不同语言的特殊要求</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Field Relationship -->
+            <div class="field-relationship">
+                <div class="field-relationship-title">
+                    <span>🔗</span>
+                    <span>字段关联关系</span>
+                </div>
+                <p><strong>greeting_template</strong> → 仅在通话开始时使用一次</p>
+                <p><strong>realtime_template</strong> → 整个通话过程持续生效（最重要）</p>
+                <p><strong>system_instructions</strong> → 与 realtime_template 配合，提供额外的系统级约束</p>
+                <p><strong>conversation_flow</strong> → 应该在 realtime_template 中引用这些步骤</p>
+            </div>
+
+            <!-- Example -->
+            <div class="example-box">
+                <div class="example-box-title">💡 完整示例</div>
+                <pre>{
+  "greeting_template": "你好！我是小助手，很高兴为您服务！",
+  "realtime_template": "你是一个专业的客服助手。\n请遵循以下对话流程：\n1. 问候客户\n2. 了解需求\n3. 提供解决方案\n4. 确认满意度",
+  "system_instructions": "保持礼貌、专业、高效",
+  "conversation_flow": ["greet", "identify_need", "provide_solution", "confirm"],
+  "example_dialogues": {
+    "en": "User: I need help\\nAgent: I'm here to assist you!",
+    "zh": "用户: 我需要帮助\\n客服: 我在这里帮助您！"
+  },
+  "language_instructions": {
+    "en": "Speak in clear, professional English",
+    "zh": "使用标准普通话，语气亲切"
+  }
+}</pre>
+            </div>
+
+            <!-- Form Fields -->
+            <h4>📝 配置字段</h4>
+            <div class="form-group">
+                <label for="greetingTemplate">Greeting Template</label>
+                <textarea id="greetingTemplate" rows="4" 
+                          placeholder="Enter greeting template..."></textarea>
+                <small class="form-help">初次问候语，只在通话开始时说一次</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="realtimeTemplate">Realtime Template *</label>
+                <textarea id="realtimeTemplate" rows="6" 
+                          placeholder="Enter realtime conversation template..."></textarea>
+                <small class="form-help">⭐ 最重要：定义整个通话过程中 AI 的行为和指令</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         2. RAG Configuration Section
+         ============================================ -->
+    <div class="config-section collapsed">
+        <div class="config-header" onclick="toggleConfigSection(this)">
+            <div class="config-header-left">
+                <div class="config-icon">🔗</div>
+                <div class="config-title-group">
+                    <h3 class="config-title">RAG Configuration</h3>
+                    <p class="config-subtitle">Retrieval-Augmented Generation settings</p>
+                </div>
+            </div>
+            <div>
+                <span class="config-badge">
+                    <span>📊</span>
+                    <span>Optional</span>
+                </span>
+                <span class="config-toggle">▼</span>
+            </div>
+        </div>
+        
+        <div class="config-body">
+            <div class="config-help-box">
+                <div class="config-help-title">
+                    <span>📚</span>
+                    <span>配置说明</span>
+                </div>
+                <div class="config-help-content">
+                    <p><strong>RAG (Retrieval-Augmented Generation)</strong> 让 AI 从知识库中检索信息来回答问题。</p>
+                    <ul>
+                        <li><code>enabled</code> - 是否启用 RAG 功能</li>
+                        <li><code>base_url</code> - RAG API 端点地址</li>
+                        <li><code>token</code> - API 认证令牌</li>
+                        <li><code>workflow_id</code> - Dify workflow ID</li>
+                        <li><code>description</code> - RAG 知识库的描述（AI 会根据此判断何时调用）</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="field-relationship">
+                <div class="field-relationship-title">
+                    <span>🔗</span>
+                    <span>使用场景</span>
+                </div>
+                <p><strong>当用户提问时</strong> → AI 判断是否需要查询知识库 → 调用 RAG API → 获取相关信息 → 基于检索结果回答</p>
+                <p><strong>description 字段很重要</strong>：AI 根据这个描述决定何时调用 RAG</p>
+            </div>
+
+            <div class="example-box">
+                <div class="example-box-title">💡 完整示例</div>
+                <pre>{
+  "enabled": true,
+  "base_url": "https://api.dify.ai/v1",
+  "token": "app-xxxxxxxxxxxxx",
+  "workflow_id": "workflow-123",
+  "description": "公司产品手册和FAQ知识库，包含产品功能、价格、使用方法等信息",
+  "timeout": 30,
+  "max_retries": 3
+}</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         3. API Configuration Section
+         ============================================ -->
+    <div class="config-section collapsed">
+        <div class="config-header" onclick="toggleConfigSection(this)">
+            <div class="config-header-left">
+                <div class="config-icon">🔌</div>
+                <div class="config-title-group">
+                    <h3 class="config-title">API Configuration</h3>
+                    <p class="config-subtitle">External API endpoints and integrations</p>
+                </div>
+            </div>
+            <div>
+                <span class="config-badge">
+                    <span>🔧</span>
+                    <span>Optional</span>
+                </span>
+                <span class="config-toggle">▼</span>
+            </div>
+        </div>
+        
+        <div class="config-body">
+            <div class="config-help-box">
+                <div class="config-help-title">
+                    <span>📚</span>
+                    <span>配置说明</span>
+                </div>
+                <div class="config-help-content">
+                    <p><strong>API Configuration</strong> 定义 AI 可以调用的外部 API 接口。</p>
+                    <ul>
+                        <li><code>endpoints</code> - API 端点映射，格式：{"function_name": "api_url"}</li>
+                        <li><code>tokens</code> - API 认证令牌，格式：{"function_name": "token"}</li>
+                        <li><code>headers</code> - 通用 HTTP 请求头</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="field-relationship">
+                <div class="field-relationship-title">
+                    <span>🔗</span>
+                    <span>与 Business Rules 的关联</span>
+                </div>
+                <p><strong>重要关联</strong>：如果 <code>function_call_rules</code> 中定义的函数名在 <code>endpoints</code> 中有对应的 URL</p>
+                <p>→ AI 会调用该 API URL（而不是发送 WhatsApp 模板）</p>
+                <p>→ 如果没有对应的 URL，则使用默认的 WhatsApp 模板发送逻辑</p>
+                <br>
+                <p><strong>优先级</strong>：API Config > 默认 WhatsApp 工具</p>
+            </div>
+
+            <div class="example-box">
+                <div class="example-box-title">💡 完整示例</div>
+                <pre>{
+  "endpoints": {
+    "get_order_status": "https://api.example.com/orders/{order_id}",
+    "create_ticket": "https://api.example.com/tickets"
+  },
+  "tokens": {
+    "get_order_status": "bearer-token-xxx",
+    "create_ticket": "bearer-token-yyy"
+  },
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  }
+}</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         4. Business Rules Section
+         ============================================ -->
+    <div class="config-section">
+        <div class="config-header" onclick="toggleConfigSection(this)">
+            <div class="config-header-left">
+                <div class="config-icon">📋</div>
+                <div class="config-title-group">
+                    <h3 class="config-title">Business Rules</h3>
+                    <p class="config-subtitle">Tool permissions and business logic</p>
+                </div>
+            </div>
+            <div>
+                <span class="config-badge">
+                    <span>🔑</span>
+                    <span>Core</span>
+                </span>
+                <span class="config-toggle">▼</span>
+            </div>
+        </div>
+        
+        <div class="config-body">
+            <div class="config-help-box">
+                <div class="config-help-title">
+                    <span>📚</span>
+                    <span>配置说明</span>
+                </div>
+                <div class="config-help-content">
+                    <p><strong>Business Rules</strong> 控制 AI 可以使用哪些工具和执行哪些操作。</p>
+                    <ul>
+                        <li><code>allowed_actions</code> - 允许的操作/工具列表（白名单模式）</li>
+                        <li><code>function_call_rules</code> - 每个工具的详细定义（描述、触发条件、参数）</li>
+                        <li><code>working_hours</code> - 工作时间设置</li>
+                        <li><code>max_conversation_time</code> - 最大通话时长（分钟）</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="field-relationship">
+                <div class="field-relationship-title">
+                    <span>🔗</span>
+                    <span>重要关联关系</span>
+                </div>
+                <p><strong>1. allowed_actions ↔ function_call_rules</strong></p>
+                <p style="margin-left: 20px;">
+                    • <code>allowed_actions</code> 是简单的工具名称列表（白名单）<br>
+                    • <code>function_call_rules</code> 提供每个工具的详细定义<br>
+                    • AI 只能使用在 <code>allowed_actions</code> 中列出的工具<br>
+                    • 如果工具在 <code>function_call_rules</code> 中有定义，使用自定义定义；否则使用系统默认定义
+                </p>
+                <br>
+                <p><strong>2. function_call_rules ↔ API Config</strong></p>
+                <p style="margin-left: 20px;">
+                    • 如果 <code>API Config.endpoints</code> 中有同名端点 → 调用 API<br>
+                    • 如果没有 → 使用默认的 WhatsApp 工具执行器
+                </p>
+            </div>
+
+            <div class="example-box">
+                <div class="example-box-title">💡 完整示例</div>
+                <pre>{
+  "allowed_actions": [
+    "book_appointment",
+    "send_whatsapp_message"
+  ],
+  "required_fields": [],
+  "max_conversation_time": 30,
+  "working_hours": {
+    "timezone": "Asia/Singapore",
+    "schedule": {
+      "monday": "09:00-18:00",
+      "tuesday": "09:00-18:00",
+      "wednesday": "09:00-18:00",
+      "thursday": "09:00-18:00",
+      "friday": "09:00-18:00"
+    }
+  },
+  "function_call_rules": {
+    "book_appointment": {
+      "description": "帮助用户预约会议或服务",
+      "when": "用户想要预约或安排时间",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "whatsappNumber": {
+            "type": "string",
+            "description": "用户WhatsApp号码"
+          },
+          "meetingTime": {
+            "type": "string",
+            "description": "会议时间 (ISO 8601格式)"
+          }
+        },
+        "required": ["whatsappNumber", "meetingTime"]
+      }
+    }
+  }
+}</pre>
+            </div>
+
+            <!-- Form Fields -->
+            <h4>📝 配置字段</h4>
+            <div class="form-group">
+                <label for="allowedActions">Allowed Actions (comma-separated)</label>
+                <input type="text" id="allowedActions" 
+                       value="book_appointment, send_whatsapp_message"
+                       placeholder="book_appointment, send_whatsapp_message">
+                <small class="form-help">⚡ 工具白名单：只有这里列出的工具 AI 才能使用</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="functionCallRules">Function Call Rules (JSON format)</label>
+                <textarea id="functionCallRules" rows="12" 
+                          style="font-family: monospace; font-size: 13px;">{
+  "book_appointment": {
+    "description": "Send a WhatsApp booking template for general appointment",
+    "when": "user wants to schedule a meeting",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "whatsappNumber": {"type": "string"},
+        "meetingTime": {"type": "string"}
+      },
+      "required": ["whatsappNumber", "meetingTime"]
+    }
+  }
+}</textarea>
+                <small class="form-help">⚙️ 详细定义每个工具的行为和参数</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleConfigSection(header) {
+            const section = header.closest('.config-section');
+            section.classList.toggle('collapsed');
+        }
+
+        // 默认展开前2个
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Collapsible config sections loaded');
+        });
+    </script>
+</body>
+</html>
+

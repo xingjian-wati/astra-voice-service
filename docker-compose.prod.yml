@@ -1,0 +1,72 @@
+# ==========================================
+# Docker Compose for Production Deployment
+# ==========================================
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  # WhatsApp Voice Service
+  whatsapp-voice:
+    image: whatsapp-voice-gateway:latest
+    container_name: whatsapp-voice-prod
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # Override with production values if needed
+      DEBUG: "false"
+      LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
+    ports:
+      - "8082:8082"
+    # Use external database (configured in .env)
+    # No database service defined here - connects to external PostgreSQL
+    networks:
+      - voice-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+
+  # Optional: Nginx reverse proxy with SSL
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: whatsapp-voice-nginx
+  #   restart: always
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - whatsapp-voice
+  #   networks:
+  #     - voice-network
+
+networks:
+  voice-network:
+    driver: bridge
+
