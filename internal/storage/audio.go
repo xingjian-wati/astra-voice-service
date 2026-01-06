@@ -184,6 +184,24 @@ func (s *AudioCacheService) CacheAudioRTP(connectionID string, audioType AudioTy
 	s.mu.Unlock()
 }
 
+// IncrementReference increments the reference count for a connection to prevent premature cleanup
+func (s *AudioCacheService) IncrementReference(connectionID string) {
+	if !s.enabled {
+		return
+	}
+
+	// Get or create reference count (start with 2 for input + output streams)
+	refCountPtr, _ := s.refCounts.LoadOrStore(connectionID, func() *int32 {
+		count := int32(2) // Start with 2 references (input + output streams)
+		return &count
+	}())
+	refCount := refCountPtr.(*int32)
+
+	// Increment reference count
+	atomic.AddInt32(refCount, 1)
+	logger.Base().Info("Ref count incremented", zap.Int32("new_count", atomic.LoadInt32(refCount)), zap.String("connection_id", connectionID))
+}
+
 // CleanupConnection decrements reference count and uploads when both streams finish
 func (s *AudioCacheService) CleanupConnection(connectionID string) {
 	if !s.enabled {
@@ -523,6 +541,40 @@ func (s *AudioCacheService) uploadToLocal(conversationID string, data []byte, re
 
 	logger.Base().Info("Saved to local file", zap.String("path", fullPath), zap.Int("bytes", len(data)), zap.String("conversation_id", conversationID))
 	return fullPath, nil
+}
+
+// GetAudioDataRange retrieves audio data for a specific connection and time range
+func (s *AudioCacheService) GetAudioDataRange(connectionID string, audioType AudioType, startTime, endTime time.Time) ([]byte, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	connChunks, exists := s.chunks[connectionID]
+	if !exists {
+		return nil, fmt.Errorf("no chunks found for connection: %s", connectionID)
+	}
+
+	chunks, exists := connChunks[string(audioType)]
+	if !exists || len(chunks) == 0 {
+		return nil, fmt.Errorf("no chunks found for audio type: %s", audioType)
+	}
+
+	// Filter chunks by time range
+	var filteredChunks []*audioChunk
+	for _, chunk := range chunks {
+		// Use a larger buffer to ensure we don't miss the beginning/end due to VAD/network latency
+		// Pre-roll: 2500ms, Post-roll: 1000ms
+		if (chunk.timestamp.After(startTime.Add(-2500*time.Millisecond)) || chunk.timestamp.Equal(startTime.Add(-2500*time.Millisecond))) &&
+			(chunk.timestamp.Before(endTime.Add(1000*time.Millisecond)) || chunk.timestamp.Equal(endTime.Add(1000*time.Millisecond))) {
+			filteredChunks = append(filteredChunks, chunk)
+		}
+	}
+
+	if len(filteredChunks) == 0 {
+		return nil, fmt.Errorf("no chunks found in time range for connection: %s (range: %v to %v)", connectionID, startTime, endTime)
+	}
+
+	// Create Ogg Opus file from filtered chunks
+	return s.CreateOggOpusFile(filteredChunks)
 }
 
 // CreateOggOpusFile creates a proper Ogg Opus file from audio chunks (public method for testing)

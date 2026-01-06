@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ClareAI/astra-voice-service/internal/config"
 	"github.com/ClareAI/astra-voice-service/internal/domain"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -182,11 +183,26 @@ func (r *VoiceMessageRepository) CreateBatch(ctx context.Context, messages []*do
 	return nil
 }
 
+// Update updates an existing voice message content and confidence
+func (r *VoiceMessageRepository) Update(ctx context.Context, id string, content string, confidence float64, originalContent string, originalConfidence float64) error {
+	updates := map[string]interface{}{
+		"content":             content,
+		"confidence":          confidence,
+		"original_content":    originalContent,
+		"original_confidence": originalConfidence,
+		"updated_at":          time.Now(),
+	}
+	if err := r.db.WithContext(ctx).Model(&domain.VoiceMessage{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		return fmt.Errorf("failed to update voice message: %w", err)
+	}
+	return nil
+}
+
 // GetByConversationID retrieves all voice messages for a conversation
 func (r *VoiceMessageRepository) GetByConversationID(ctx context.Context, conversationID string) ([]*domain.VoiceMessage, error) {
 	var messages []*domain.VoiceMessage
 	if err := r.db.WithContext(ctx).
-		Where("conversation_id = ?", conversationID).
+		Where("conversation_id = ? AND (role != ? OR confidence >= ? OR confidence IS NULL)", conversationID, config.MessageRoleUser, config.DefaultConfidenceThreshold).
 		Order("created_at ASC").
 		Find(&messages).Error; err != nil {
 		return nil, fmt.Errorf("failed to get voice messages: %w", err)

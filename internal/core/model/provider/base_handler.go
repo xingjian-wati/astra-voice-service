@@ -25,13 +25,20 @@ const (
 
 const DefaultMaxCallDurationSeconds = 300 // 5 minutes safety net for orphan sessions
 
+type SpeechTiming struct {
+	StartTime time.Time
+	EndTime   time.Time
+}
+
 // ConnectionState tracks the realtime state of a connection
 type ConnectionState struct {
-	MaxCallTimer      *time.Timer
-	SilenceTimer      *time.Timer
-	RetryCount        int
-	SilenceConfig     *config.SilenceConfig
-	LastAudioActivity int64 // unix nano
+	MaxCallTimer       *time.Timer
+	SilenceTimer       *time.Timer
+	RetryCount         int
+	SilenceConfig      *config.SilenceConfig
+	LastAudioActivity  int64 // unix nano
+	CurrentSpeechStart time.Time
+	ItemTimings        map[string]*SpeechTiming
 }
 
 // BaseHandler holds common connection lifecycle/state logic and external dependencies.
@@ -217,6 +224,7 @@ func (h *BaseHandler) InitConnectionState(connectionID string, maxDuration int, 
 	state := &ConnectionState{
 		SilenceConfig:     silenceConfig,
 		LastAudioActivity: time.Now().UnixNano(),
+		ItemTimings:       make(map[string]*SpeechTiming),
 	}
 
 	if maxDuration <= 0 {

@@ -34,13 +34,16 @@ func (VoiceConversation) TableName() string {
 
 // VoiceMessage represents a message in a voice conversation
 type VoiceMessage struct {
-	ID             string    `json:"id" db:"id" gorm:"column:id;primaryKey"`
-	ConversationID string    `json:"conversation_id" db:"conversation_id" gorm:"column:conversation_id;index"`
-	Role           string    `json:"role" db:"role" gorm:"column:role"` // user, assistant, agent-action
-	Content        string    `json:"content" db:"content" gorm:"column:content"`
-	OriginalID     int64     `json:"original_id" db:"original_id" gorm:"column:original_id"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at" gorm:"column:created_at"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at" gorm:"column:updated_at"`
+	ID                 string    `json:"id" db:"id" gorm:"column:id;primaryKey"`
+	ConversationID     string    `json:"conversation_id" db:"conversation_id" gorm:"column:conversation_id;index"`
+	Role               string    `json:"role" db:"role" gorm:"column:role"` // user, assistant, agent-action
+	Content            string    `json:"content" db:"content" gorm:"column:content"`
+	OriginalID         int64     `json:"original_id" db:"original_id" gorm:"column:original_id"`
+	OriginalContent    string    `json:"original_content" db:"original_content" gorm:"column:original_content"`
+	OriginalConfidence float64   `json:"original_confidence" db:"original_confidence" gorm:"column:original_confidence"`
+	Confidence         float64   `json:"confidence" db:"confidence" gorm:"column:confidence"`
+	CreatedAt          time.Time `json:"created_at" db:"created_at" gorm:"column:created_at"`
+	UpdatedAt          time.Time `json:"updated_at" db:"updated_at" gorm:"column:updated_at"`
 }
 
 func (VoiceMessage) TableName() string {

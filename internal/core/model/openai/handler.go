@@ -18,6 +18,9 @@ type PionOpusWriter = webrtcadapter.OpusWriter
 // WhatsAppCallConnection is an alias for provider.CallConnection to maintain backward compatibility
 type WhatsAppCallConnection = provider.CallConnection
 
+// SpeechTiming is an alias for provider.SpeechTiming to maintain backward compatibility
+type SpeechTiming = provider.SpeechTiming
+
 // Handler manages AI model connections via WebRTC (supports multiple providers: OpenAI, Gemini, etc.)
 type Handler struct {
 	*provider.BaseHandler
