@@ -59,6 +59,7 @@ const (
 	DefaultSilenceInactivityCheckDuration = 20
 	DefaultSilenceMaxRetries              = 5
 	DefaultSilenceMessage                 = "Are you still there? I'm here to help if you need anything."
+	DefaultConfidenceThreshold            = 75.0
 )
 
 // AgentConfig represents a complete agent configuration

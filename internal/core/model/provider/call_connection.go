@@ -23,7 +23,11 @@ type CallConnection interface {
 	GetChannelTypeString() string
 
 	// Conversation management
-	AddMessage(role, content string)
+
+	AddMessage(role, content string) string
+	AddMessageWithConfidence(role, content string, confidence float64) string
+	UpdateMessage(messageID string, content string, confidence float64, originalContent string, originalConfidence float64) error
+
 	AddAction(action pubsub.Action)
 	GetConversationHistory() []ConversationMessage
 

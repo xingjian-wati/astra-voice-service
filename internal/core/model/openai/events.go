@@ -2,9 +2,14 @@ package openai
 
 import (
 	"fmt"
+	"math"
 	"strings"
+	"unicode"
+
+	"time"
 
 	"github.com/ClareAI/astra-voice-service/internal/config"
+	"github.com/ClareAI/astra-voice-service/internal/storage"
 	"github.com/ClareAI/astra-voice-service/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -35,13 +40,14 @@ func (h *Handler) handleModelEvent(connectionID string, event map[string]interfa
 	case "input_audio_buffer.speech_started":
 		// User started speaking - stop silence timer AND reset retry count
 		h.ResetSilenceTimer(connectionID)
+		h.recordSpeechStarted(connectionID)
 
 	case "input_audio_buffer.speech_stopped":
 		// User stopped speaking
 
 	case "input_audio_buffer.committed":
 		// Audio buffer committed - user speech ready for transcription
-		logger.Base().Debug("🎙 Audio buffer committed for: - waiting for transcription...", zap.String("connection_id", connectionID))
+		h.recordSpeechCommitted(connectionID, event)
 
 	case "conversation.item.added":
 		h.handleConversationItemAdded(connectionID, event)
@@ -77,16 +83,67 @@ func (h *Handler) handleModelEvent(connectionID string, event map[string]interfa
 	}
 }
 
-func (h *Handler) writeMessage(connectionID, role, content string) {
+func (h *Handler) writeMessage(connectionID, role, content string) string {
+	return h.writeMessageWithConfidence(connectionID, role, content, 0)
+}
+
+func (h *Handler) writeMessageWithConfidence(connectionID, role, content string, confidence float64) string {
 	if h.ConnectionGetter == nil {
-		return
+		return ""
 	}
 	conn := h.ConnectionGetter(connectionID)
 	if conn == nil {
+		return ""
+	}
+
+	// Default to 100% confidence for non-user roles (assistant, system) if not specified
+	if role != config.MessageRoleUser && confidence == 0 {
+		confidence = 100.0
+	}
+	var messageID string
+	if confidence > 0 {
+		messageID = conn.AddMessageWithConfidence(role, content, confidence)
+	} else {
+		messageID = conn.AddMessage(role, content)
+	}
+	logger.Base().Info("Added message to conversation history", zap.String("connection_id", connectionID), zap.String("role", role), zap.String("content", content), zap.Float64("confidence", confidence))
+	return messageID
+}
+
+// recordSpeechStarted records the start time of the current speech
+func (h *Handler) recordSpeechStarted(connectionID string) {
+	h.Mutex.Lock()
+	defer h.Mutex.Unlock()
+	if state, exists := h.ConnectionStates[connectionID]; exists {
+		state.CurrentSpeechStart = time.Now().UTC()
+	}
+}
+
+// recordSpeechCommitted records the timing for a specific item_id when the buffer is committed
+func (h *Handler) recordSpeechCommitted(connectionID string, event map[string]interface{}) {
+	h.Mutex.Lock()
+	defer h.Mutex.Unlock()
+
+	itemID, _ := event["item_id"].(string)
+	if itemID == "" {
 		return
 	}
-	conn.AddMessage(role, content)
-	logger.Base().Info("Added message to conversation history", zap.String("connection_id", connectionID), zap.String("role", role), zap.String("content", content))
+
+	if state, exists := h.ConnectionStates[connectionID]; exists {
+		// If CurrentSpeechStart is zero (e.g. speech_started event was missed),
+		// use a reasonable default (e.g. 2 seconds before commit)
+		startTime := state.CurrentSpeechStart
+		if startTime.IsZero() {
+			startTime = time.Now().UTC().Add(-2 * time.Second)
+		}
+
+		state.ItemTimings[itemID] = &SpeechTiming{
+			StartTime: startTime,
+			EndTime:   time.Now().UTC(),
+		}
+		// Reset CurrentSpeechStart for next speech
+		state.CurrentSpeechStart = time.Time{}
+	}
 }
 
 func (h *Handler) handleResponseOutputItemDone(connectionID string, event map[string]interface{}) {
@@ -239,28 +296,126 @@ func (h *Handler) handleResponseDone(connectionID string, event map[string]inter
 func (h *Handler) handleInputAudioTranscriptionCompleted(connectionID string, event map[string]interface{}) {
 	logger.Base().Debug("🎙 Transcription completed event received for", zap.String("connection_id", connectionID))
 	if transcript, ok := event["transcript"].(string); ok && transcript != "" {
-		// Add to conversation history
-		h.writeMessage(connectionID, config.MessageRoleUser, transcript)
-
 		// Log transcript and logprobs
 		logFields := []zap.Field{
 			zap.String("transcript", transcript),
 			zap.String("connection_id", connectionID),
 		}
 
-		// Check for logprobs in the event
-		if logprobs, ok := event["logprobs"]; ok {
-			logFields = append(logFields, zap.Any("logprobs", logprobs))
+		var confidence float64
+
+		// Check for logprobs in the event and compute confidence
+		if logprobsData, ok := event["logprobs"].([]interface{}); ok {
+			tokens := make([]TokenLogprob, 0, len(logprobsData))
+			for _, item := range logprobsData {
+				if itemMap, ok := item.(map[string]interface{}); ok {
+					token, _ := itemMap["token"].(string)
+					logprob, _ := itemMap["logprob"].(float64)
+					tokens = append(tokens, TokenLogprob{
+						Token:   token,
+						Logprob: logprob,
+					})
+				}
+			}
+
+			if len(tokens) > 0 {
+				confidence = ComputeSentenceConfidence(tokens, false)
+				logFields = append(logFields, zap.Float64("confidence", confidence))
+			}
+			logFields = append(logFields, zap.Any("logprobs", logprobsData))
 		}
 
 		logger.Base().Info("User transcript completed", logFields...)
 
+		// Add to conversation history with confidence
+		// Add to conversation history with confidence and get message ID
+		messageID := h.writeMessageWithConfidence(connectionID, config.MessageRoleUser, transcript, confidence)
+
+		// Check for low confidence and reprocess if needed
+		itemID, _ := event["item_id"].(string)
+
+		if confidence < config.DefaultConfidenceThreshold && messageID != "" && itemID != "" {
+			logger.Base().Debug("Low confidence detected, reprocessing audio", zap.String("connection_id", connectionID), zap.String("message_id", messageID), zap.String("item_id", itemID), zap.Float64("confidence", confidence))
+
+			// Increment reference count to prevent audio cache cleanup during reprocessing
+			if audioCache := storage.GetAudioCache(); audioCache != nil {
+				audioCache.IncrementReference(connectionID)
+			}
+
+			go h.reprocessAudioAsync(connectionID, messageID, itemID, transcript, confidence)
+		}
 		// Process user input for RAG and language guidance
 		h.processUserMessage(connectionID, transcript)
 	} else {
 		logger.Base().Debug("No transcript found in transcription event for", zap.String("connection_id", connectionID))
 		logger.Base().Debug("Event data", zap.Any("event", event))
 	}
+}
+
+// TokenLogprob represents logprob info for a single token
+type TokenLogprob struct {
+	Token   string
+	Logprob float64
+}
+
+// ComputeSentenceConfidence computes the confidence score for a sentence based on token logprobs
+func ComputeSentenceConfidence(tokens []TokenLogprob, ignoreFirst bool) float64 {
+	if len(tokens) == 0 {
+		return 0
+	}
+
+	start := 0
+	end := len(tokens) - 1
+
+	if ignoreFirst && len(tokens) > 1 {
+		start = 1
+	}
+
+	// Remove trailing punctuation
+	for end >= start && isPunctuation(tokens[end].Token) {
+		end--
+	}
+
+	if end < start {
+		return 0
+	}
+
+	// Calculate average confidence
+	sum := 0.0
+	count := 0
+
+	for i := start; i <= end; i++ {
+		tok := tokens[i]
+		// Skip punctuation
+		if isPunctuation(tok.Token) {
+			continue
+		}
+		// logprob -> probability
+		p := math.Exp(tok.Logprob) * 100
+		if p > 100 {
+			p = 100
+		}
+		sum += p
+		count++
+	}
+
+	if count == 0 {
+		return 0
+	}
+
+	avg := sum / float64(count)
+
+	return avg
+}
+
+// isPunctuation checks if a token is punctuation
+func isPunctuation(token string) bool {
+	for _, r := range token {
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) {
+			return true
+		}
+	}
+	return false
 }
 
 // handleFunctionCallArgumentsDone handles when function call arguments are completed

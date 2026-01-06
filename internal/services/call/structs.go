@@ -236,9 +236,19 @@ func (c *WhatsAppCallConnection) InitializeVoiceConversation() error {
 }
 
 // AddMessage adds a message to the conversation history and stores it in the database
-func (c *WhatsAppCallConnection) AddMessage(role, content string) {
+func (c *WhatsAppCallConnection) AddMessage(role, content string) string {
+	return c.AddMessageWithConfidence(role, content, 0)
+}
+
+// AddMessageWithConfidence adds a message with confidence score to the conversation history and stores it in the database
+func (c *WhatsAppCallConnection) AddMessageWithConfidence(role, content string, confidence float64) string {
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
+
+	// Default to 100% confidence for non-user roles (assistant, system) if not specified
+	if role != config.MessageRoleUser && confidence == 0 {
+		confidence = 100.0
+	}
 
 	message := ConversationMessage{
 		ID:        uuid.New().String(),
@@ -275,6 +285,7 @@ func (c *WhatsAppCallConnection) AddMessage(role, content string) {
 				ConversationID: conversationID,
 				Role:           role,
 				Content:        content,
+				Confidence:     confidence,
 				CreatedAt:      message.Timestamp,
 			}
 
@@ -284,6 +295,41 @@ func (c *WhatsAppCallConnection) AddMessage(role, content string) {
 			}
 		}()
 	}
+	return message.ID
+}
+
+// UpdateMessage updates an existing message in conversation history and database
+func (c *WhatsAppCallConnection) UpdateMessage(messageID string, content string, confidence float64, originalContent string, originalConfidence float64) error {
+	c.Mutex.Lock()
+
+	// Update in memory history
+	found := false
+	for i := range c.ConversationHistory {
+		if c.ConversationHistory[i].ID == messageID {
+			c.ConversationHistory[i].Content = content
+			found = true
+			break
+		}
+	}
+	c.Mutex.Unlock()
+
+	if !found {
+		return fmt.Errorf("message not found in history: %s", messageID)
+	}
+
+	// Update in database if repository manager is available
+	if c.RepoManager != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := c.RepoManager.VoiceMessage().Update(ctx, messageID, content, confidence, originalContent, originalConfidence); err != nil {
+			logger.Base().Error("Failed to update voice message in database", zap.String("connection_id", c.ID), zap.String("message_id", messageID), zap.Error(err))
+			return fmt.Errorf("failed to update voice message in database: %w", err)
+		}
+	}
+
+	logger.Base().Info("Updated message in conversation history", zap.String("connection_id", c.ID), zap.String("message_id", messageID), zap.String("content", content), zap.Float64("confidence", confidence), zap.String("original_content", originalContent), zap.Float64("original_confidence", originalConfidence))
+	return nil
 }
 
 // AddAction records a tool action for metrics publishing.
